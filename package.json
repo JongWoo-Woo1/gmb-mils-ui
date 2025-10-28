@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development",
-    "review": "node tools/export-ui-review.mjs",
+    "review": "node tools/review.mjs",
     "build": "webpack --mode production"
   },
   "devDependencies": {
