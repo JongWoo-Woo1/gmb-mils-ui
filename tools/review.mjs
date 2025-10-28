@@ -16,10 +16,9 @@ try {
   run('npm run build');
 
   // 2) PNG/PDF 스냅샷 (dist/index.html 기준)
-  //   - export-ui-review.mjs 는 puppeteer-core로 PDF/PNG 생성만 담당
   run('node tools/export-ui-review.mjs dist/index.html');
 
-  // 3) git add (전체)
+  // 3) git add
   run('git add -A');
 
   // 4) 변경 없으면 커밋 생략
@@ -27,17 +26,15 @@ try {
   if (!staged) {
     console.log('No changes to commit (working tree clean).');
   } else {
-    // 커밋 메시지: feat: <인자>  (인자 없으면 기본 메시지)
     const msg = process.argv.slice(2).join(' ').trim();
     const commitMsg = msg
       ? `feat: ${msg}`
       : 'chore(ui): update review snapshot';
-    // 따옴표 이스케이프
     const safe = commitMsg.replace(/"/g, '\\"');
     run(`git commit -m "${safe}"`);
   }
 
-  // 5) push (업스트림 없으면 -u로 설정)
+  // 5) push (업스트림 없으면 -u 설정)
   const branch = out('git rev-parse --abbrev-ref HEAD');
   let hasUpstream = true;
   try {
@@ -47,7 +44,7 @@ try {
   }
   run(hasUpstream ? 'git push' : `git push -u origin ${branch}`);
 
-  // 6) 최종 해시 출력
+  // 6) 해시 출력
   const shortHash = out('git rev-parse --short HEAD');
   console.log(`\nbaseline=${shortHash}`);
   console.log('Done ✅');
