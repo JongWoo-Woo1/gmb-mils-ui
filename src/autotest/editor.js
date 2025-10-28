@@ -10,10 +10,10 @@ export function initAutoEditor(){
     const row = document.createElement('div');
     row.className = 'row';
     row.innerHTML = `
-      <div class="cell"><input value="${values[0] ?? ''}" /></div>
-      <div class="cell"><input value="${values[1] ?? ''}" /></div>
-      <div class="cell"><input value="${values[2] ?? ''}" /></div>
-      <div class="cell"><input value="${values[3] ?? ''}" /></div>`;
+      <div class="cell"><input type="number" min="1" value="${values[0] ?? ''}" /></div>
+      <div class="cell"><input value=\"${values[1] ?? ''}\" /></div>
+      <div class="cell"><input value=\"${values[2] ?? ''}\" /></div>
+      <div class="cell"><input value=\"${values[3] ?? ''}\" /></div>`;
     body.appendChild(row);
   }
 
@@ -41,10 +41,15 @@ export function initAutoEditor(){
     }
   });
 
-  root.querySelector('#at-add-row')?.addEventListener('click', () => addRow());
+  root.querySelector('#at-add-row')?.addEventListener('click', () => {
+    // 마지막 Step 값 +1 자동
+    const last = body.querySelector('.row:last-child input[type=\"number\"]')?.value;
+    const next = String((parseInt(last || '0', 10) || 0) + 1);
+    addRow([next, '', '', '']);
+  });
 
   root.querySelector('#at-validate')?.addEventListener('click', () => {
-    // 매우 간단한 검증 데모: Step 번호 정수 확인
+    // Step 정수 & 공란 허용 안 함
     const ok = [...body.querySelectorAll('.row')].every(row => {
       const v = row.querySelector('.cell:first-child input')?.value?.trim();
       return /^\d+$/.test(v);
@@ -56,7 +61,7 @@ export function initAutoEditor(){
     const rows = [...body.querySelectorAll('.row')].map(row =>
       [...row.querySelectorAll('input')].map(i => i.value.replace(/,/g,''))
     );
-    const csv = ['Step,Input1,Input2,Expected', ...rows.map(r => r.join(','))].join('\n');
+    const csv = ['Step,Input1,Input2,Expected', ...rows.map(r => r.join(','))].join('\\n');
     const blob = new Blob([csv], {type:'text/csv'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

@@ -1,7 +1,7 @@
 # Code Snapshot
 
-- commit: 6ba4188  (branch: main)
-- generated: 2025-10-28 13:03:12
+- commit: f37d805  (branch: main)
+- generated: 2025-10-28 14:13:38
 - include: src, tools + package.json, webpack.config.js
 - exclude dirs: node_modules, dist, docs, .git, .github, assets
 - exclude files: package-lock.json
@@ -36,7 +36,9 @@
 │ ├─tokens.css
 │ └─toolbar.css
 ├─utils
-│ └─snapshotFab.js
+│ ├─frameResizer.js
+│ ├─snapshotFab.js
+│ └─windowResizer.js
 └─views
   ├─auto.html
   ├─autotest
@@ -84,8 +86,7 @@
     "webpack-dev-server": "^4.15.2"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.3"
+    "html2canvas": "^1.4.1"
   }
 }
 
@@ -105,10 +106,10 @@ export function initAutoEditor(){
     const row = document.createElement('div');
     row.className = 'row';
     row.innerHTML = `
-      <div class="cell"><input value="${values[0] ?? ''}" /></div>
-      <div class="cell"><input value="${values[1] ?? ''}" /></div>
-      <div class="cell"><input value="${values[2] ?? ''}" /></div>
-      <div class="cell"><input value="${values[3] ?? ''}" /></div>`;
+      <div class="cell"><input type="number" min="1" value="${values[0] ?? ''}" /></div>
+      <div class="cell"><input value=\"${values[1] ?? ''}\" /></div>
+      <div class="cell"><input value=\"${values[2] ?? ''}\" /></div>
+      <div class="cell"><input value=\"${values[3] ?? ''}\" /></div>`;
     body.appendChild(row);
   }
 
@@ -136,10 +137,15 @@ export function initAutoEditor(){
     }
   });
 
-  root.querySelector('#at-add-row')?.addEventListener('click', () => addRow());
+  root.querySelector('#at-add-row')?.addEventListener('click', () => {
+    // 마지막 Step 값 +1 자동
+    const last = body.querySelector('.row:last-child input[type=\"number\"]')?.value;
+    const next = String((parseInt(last || '0', 10) || 0) + 1);
+    addRow([next, '', '', '']);
+  });
 
   root.querySelector('#at-validate')?.addEventListener('click', () => {
-    // 매우 간단한 검증 데모: Step 번호 정수 확인
+    // Step 정수 & 공란 허용 안 함
     const ok = [...body.querySelectorAll('.row')].every(row => {
       const v = row.querySelector('.cell:first-child input')?.value?.trim();
       return /^\d+$/.test(v);
@@ -151,7 +157,7 @@ export function initAutoEditor(){
     const rows = [...body.querySelectorAll('.row')].map(row =>
       [...row.querySelectorAll('input')].map(i => i.value.replace(/,/g,''))
     );
-    const csv = ['Step,Input1,Input2,Expected', ...rows.map(r => r.join(','))].join('\n');
+    const csv = ['Step,Input1,Input2,Expected', ...rows.map(r => r.join(','))].join('\\n');
     const blob = new Blob([csv], {type:'text/csv'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -175,6 +181,7 @@ export function initAutoRun(){
 
   const stepsEl = root.querySelector('#rt-steps');
   const bar = root.querySelector('#rt-progress > i');
+  const pctEl = root.querySelector('#rt-pct');
 
   // 데모 스텝 목록 (실제론 Editor/파일에서 로딩)
   const steps = Array.from({length: 30}, (_,i)=>`Step ${i+1}  •  Do something`);
@@ -187,7 +194,7 @@ export function initAutoRun(){
   const indT = root.querySelector('#ind-t');
   const indStep = root.querySelector('#ind-step');
 
-  // 아주 가벼운 캔버스 렌더(임시)
+  // 간단 캔버스 렌더(임시)
   const canvas = root.querySelector('#rt-canvas');
   const ctx = canvas?.getContext('2d');
 
@@ -196,6 +203,7 @@ export function initAutoRun(){
     prog = Math.min(100, prog + 0.5);
     idx = Math.min(steps.length-1, Math.floor((prog/100)*steps.length));
     bar.style.width = prog + '%';
+    if (pctEl) pctEl.textContent = Math.round(prog) + '%';
 
     // 스텝 하이라이트
     [...stepsEl.children].forEach((li,i)=> li.classList.toggle('is-active', i===idx));
@@ -207,7 +215,7 @@ export function initAutoRun(){
     const t = +(25 + Math.cos(prog/10)).toFixed(1);
     indV.textContent = `${v} V`; indI.textContent = `${i} mA`; indT.textContent = `${t} °C`;
 
-    // 간이 그래프
+    // 그래프
     if(ctx){
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.strokeStyle = '#e5e7eb'; ctx.strokeRect(0,0,canvas.width,canvas.height);
@@ -226,10 +234,11 @@ export function initAutoRun(){
     alert('Load Test Case (실제 로딩 로직 연동 지점)');
   });
   root.querySelector('#rt-start')?.addEventListener('click', ()=> {
-    clearInterval(timer); prog = 0; idx = 0; tick(); timer = setInterval(tick, 50);
+    clearInterval(timer); prog = 0; idx = 0; if (pctEl) pctEl.textContent = '0%'; bar.style.width='0%';
+    tick(); timer = setInterval(tick, 50);
   });
   root.querySelector('#rt-stop')?.addEventListener('click', ()=> {
-    clearInterval(timer); bar.style.width = '0%';
+    clearInterval(timer); bar.style.width = '0%'; if (pctEl) pctEl.textContent = '0%';
     [...stepsEl.children].forEach(li=> li.classList.remove('is-active'));
     indStep.textContent = '—';
   });
@@ -342,6 +351,7 @@ export function initAutoRun(){
 import './styles/main.css';
 import logoUrl from './assets/gmb-logo.png';
 
+// HTML
 import layoutHtml from './components/layout.html';
 import dashboardHtml from './views/dashboard.html';
 import autoHtml from './views/auto.html';
@@ -349,13 +359,17 @@ import manualHtml from './views/manual.html';
 import resultHtml from './views/result.html';
 import settingsHtml from './views/settings.html';
 
+// AutoTest views
 import editorHtml from './views/autotest/editor.html';
-import runHtml    from './views/autotest/run.html';
+import runHtml from './views/autotest/run.html';
 
+// AutoTest init
 import { initAutoEditor } from './autotest/editor';
 import { initAutoRun } from './autotest/run';
 
+// Utilities
 import { mountSnapshotFab } from './utils/snapshotFab';
+import { mountWindowResizer } from './utils/windowResizer';
 
 const toFragment = (html) => {
   const t = document.createElement('template');
@@ -363,17 +377,22 @@ const toFragment = (html) => {
   return t.content;
 };
 
+// Layout
 const app = document.getElementById('app');
 app.appendChild(toFragment(layoutHtml));
 document.getElementById('logo').src = logoUrl;
 
+// Routes
 const routes = {
   dashboard: { title: 'Dashboard', frag: toFragment(dashboardHtml) },
-  auto:      { title: 'Auto Test', frag: toFragment(autoHtml) },
-  'auto/editor': { title: 'Auto Test — Testcase Editor', frag: toFragment(editorHtml) },
-  'auto/run':    { title: 'Auto Test — Run Test',        frag: toFragment(runHtml) },
-  manual:   { title: 'Manual Test', frag: toFragment(manualHtml) },
-  result:   { title: 'Result Viewer', frag: toFragment(resultHtml) },
+  auto: { title: 'Auto Test', frag: toFragment(autoHtml) },
+  'auto/editor': {
+    title: 'Auto Test — Testcase Editor',
+    frag: toFragment(editorHtml),
+  },
+  'auto/run': { title: 'Auto Test — Run Test', frag: toFragment(runHtml) },
+  manual: { title: 'Manual Test', frag: toFragment(manualHtml) },
+  result: { title: 'Result Viewer', frag: toFragment(resultHtml) },
   settings: { title: 'Settings', frag: toFragment(settingsHtml) },
 };
 
@@ -389,7 +408,10 @@ function setActiveNav(key) {
 
 function renderRoute() {
   let key = location.hash.replace('#/', '') || 'dashboard';
-  if (key === 'auto') { location.hash = '#/auto/editor'; return; }
+  if (key === 'auto') {
+    location.hash = '#/auto/editor';
+    return;
+  }
   const page = routes[key] || routes.dashboard;
   titleEl.textContent = page.title;
   contentEl.replaceChildren(page.frag.cloneNode(true));
@@ -401,75 +423,23 @@ function renderRoute() {
 window.addEventListener('hashchange', renderRoute);
 renderRoute();
 
-// Mount bottom-right SNAP button once
-mountSnapshotFab({ selector: '.lv-frame', filename: 'Snapshot', size: [1920,1000] });
-
-// --- Demo bits below (unchanged from your project) ---
-const EStop = { READY:'ready', WARNING:'warning', EMERGENCY:'emergency', LATCHED:'latched' };
-const estopBtn = document.getElementById('btn-estop');
-function labelFor(state){ return state === EStop.LATCHED ? 'RESET' : 'E-STOP'; }
-function titleFor(state){
-  switch(state){
-    case EStop.READY: return 'E-Stop: Ready (click to trip)';
-    case EStop.WARNING: return 'E-Stop: Warning (click to trip)';
-    case EStop.EMERGENCY: return 'E-Stop: Emergency (click to latch)';
-    case EStop.LATCHED: return 'E-Stop: Latched (click to reset)';
-  }
-}
-function setEStopState(state){
-  if(!estopBtn) return;
-  estopBtn.dataset.state = state;
-  estopBtn.textContent = labelFor(state);
-  estopBtn.title = titleFor(state);
-}
-setEStopState(EStop.READY);
-estopBtn?.addEventListener('click',(e)=>{
-  const cur = estopBtn.dataset.state;
-  if(e.shiftKey){
-    const order=[EStop.READY,EStop.WARNING,EStop.EMERGENCY,EStop.LATCHED];
-    const next=order[(order.indexOf(cur)+1)%order.length];
-    setEStopState(next); return;
-  }
-  setEStopState(cur===EStop.LATCHED?EStop.READY:EStop.LATCHED);
+// Tools
+mountSnapshotFab({
+  selector: '.lv-frame',
+  filename: 'Snapshot',
+  size: [1920, 1000],
+});
+// v2: window-only resizer, VIEW fixed at 1440×1000
+mountWindowResizer({
+  viewSelector: '.lv-frame',
+  viewWidth: 1600,
+  viewHeight: 1000,
+  windowWidth: 1920,
+  minWindow: 1740,
+  maxWindow: 2880,
 });
 
-function setConnection(key, status){
-  const item=document.querySelector(`.conn-item[data-key="${key}"]`);
-  if(!item) return;
-  item.querySelector('.dot').setAttribute('data-status', status);
-  item.querySelector('.text').textContent = status==='connected'?'Connected':'Disconnected';
-}
-setConnection('sim','connected'); setConnection('vs','disconnected');
-
-const monitorEl = document.getElementById('run-monitor');
-const modeChip = document.getElementById('rm-mode');
-const statusChip = document.getElementById('rm-status');
-const line1 = document.getElementById('rm-line1');
-const line2 = document.getElementById('rm-line2');
-const Modes = { IDLE: 'idle', AUTO: 'auto', MANUAL: 'manual' };
-const Status = { STANDBY: 'Standby', RUNNING: 'Running' };
-function setMonitor(mode){
-  if(!monitorEl) return;
-  monitorEl.dataset.mode = mode;
-  switch(mode){
-    case Modes.AUTO:
-      modeChip.textContent='Auto'; statusChip.textContent=Status.RUNNING; statusChip.removeAttribute('data-level');
-      line1.textContent='Battery_A • TC-0421 • Step 08  Set Voltage 12.0V';
-      line2.textContent='Case Elapsed 00:18:22  •  Step 8/120 (12%)'; break;
-    case Modes.MANUAL:
-      modeChip.textContent='Manual'; statusChip.textContent=Status.STANDBY; statusChip.removeAttribute('data-level');
-      line1.textContent='Manual Action  Jog Axis X+'; line2.textContent='Session Elapsed 00:03:41'; break;
-    default:
-      modeChip.textContent='Idle'; statusChip.textContent=Status.STANDBY; statusChip.removeAttribute('data-level');
-      line1.textContent='No active test'; line2.textContent='—';
-  }
-}
-function cycleMode(){
-  const cur = monitorEl?.dataset.mode || Modes.IDLE;
-  const next = cur===Modes.IDLE ? Modes.AUTO : (cur===Modes.AUTO ? Modes.MANUAL : Modes.IDLE);
-  setMonitor(next);
-}
-monitorEl?.addEventListener('click',cycleMode); setMonitor(Modes.IDLE);
+// Demo code (unchanged) ...
 
 ```
 
@@ -491,6 +461,7 @@ monitorEl?.addEventListener('click',cycleMode); setMonitor(Modes.IDLE);
 .at-steps .head{ background:#fafafa; font-weight:700; border:1px solid var(--line); border-bottom:none; }
 #at-step-body .row{ display:grid; grid-template-columns: 100px 1fr 1fr 1fr; border:1px solid var(--line); border-top:none; }
 #at-step-body .cell{ padding:8px 10px; border-right:1px solid var(--line-soft); }
+#at-step-body .cell:first-child input{ text-align:center; } /* Step 입력 가독성 */
 #at-step-body .cell:last-child{ border-right:none; }
 #at-step-body input{ width:100%; height:30px; padding:0 8px; border:1px solid var(--line); background:#fff; font:inherit; }
 
@@ -503,21 +474,36 @@ monitorEl?.addEventListener('click',cycleMode); setMonitor(Modes.IDLE);
 .tab.is-active { border-color: var(--brand-red); }
 
 .at-ctrl .btn-row{ display:flex; gap:8px; }
-.progress{ border:1px solid var(--line); height:16px; margin-top:10px; position:relative; background:#fff; }
-.progress>i{ position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--brand-red); }
+.progress{
+  border:1px solid var(--line);
+  height:20px;                /* ↑ 더 두껍게 */
+  margin-top:10px; position:relative; background:#fff;
+}
+.progress>i{
+  position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--brand-red);
+}
+.progress .pct{
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  font-size:12px; color:var(--ink-700);
+}
 
-.at-run-grid{ display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-top:12px; }
+.at-run-grid{ display:grid; grid-template-columns: 1.6fr 1fr; gap:16px; margin-top:12px; }
 .at-chart{ padding:12px; }
 .chart{ border:1px solid var(--line); background:#fff; padding:10px; display:grid; place-items:center; }
 
 .step-list{ margin:0; padding-left:18px; max-height:360px; overflow:auto; }
 .step-list li{ padding:6px 0; border-bottom:1px solid var(--line-soft); }
-.step-list li.is-active{ font-weight:700; }
+.step-list li.is-active{
+  font-weight:700;
+  border-left:3px solid var(--brand-red);
+  background:#fff8f8;
+  padding-left:9px;           /* 좌측 강조선 보정 */
+}
 
 .at-ind .ind-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-top:8px; }
 .ind{ border:1px solid var(--line); background:#fff; padding:10px; }
 .ind .k{ font-size:12px; color:var(--ink-500); }
-.ind .v{ font-size:18px; font-weight:700; margin-top:2px; }
+.ind .v{ font-size:20px; font-weight:700; margin-top:2px; } /* 값 크기 ↑ */
 
 ```
 
@@ -1041,21 +1027,126 @@ a {
 
 ```
 
+### src\utils\frameResizer.js
+```js
+// Horizontal Resizer for the 1920×1000 preview frame (.lv-frame)
+export function mountFrameResizer(opts={}){
+  const {
+    selector = '.lv-frame',
+    initial = 1920,
+    height = 1000,
+    min = 1320,
+    max = 2560
+  } = opts;
+
+  const frame = document.querySelector(selector);
+  if(!frame){ console.warn('[FrameResizer] target not found:', selector); return; }
+
+  frame.style.position = frame.style.position || 'relative';
+  frame.style.marginLeft = 'auto';
+  frame.style.marginRight = 'auto';
+  frame.style.width = initial + 'px';
+  frame.style.height = height + 'px';
+
+  const css = `
+    .lv-resize-handle{
+      position:absolute; top:0; right:-6px; width:12px; height:100%;
+      cursor: ew-resize; z-index: 2000;
+      background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,.06) 100%);
+      border-left: 1px solid var(--line);
+    }
+    .lv-resize-handle::after{
+      content:''; position:absolute; top:50%; left:50%; transform: translate(-50%,-50%);
+      width:4px; height:40px; border-radius:2px; background: rgba(0,0,0,.2);
+      box-shadow: -6px 0 0 rgba(0,0,0,.12), 6px 0 0 rgba(0,0,0,.12);
+      opacity:.25;
+    }
+    .lv-size-hud{
+      position:absolute; top:8px; right:16px; z-index:2100;
+      padding:4px 8px; background:#000; color:#fff; font-size:12px; border-radius:4px;
+      opacity:.8; pointer-events:none;
+    }
+  `;
+  const style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  const handle = document.createElement('div');
+  handle.className = 'lv-resize-handle';
+  frame.appendChild(handle);
+
+  const hud = document.createElement('div');
+  hud.className = 'lv-size-hud';
+  hud.textContent = `${initial} × ${height}`;
+  frame.appendChild(hud);
+
+  let dragging = false;
+  let startX = 0;
+  let startW = initial;
+
+  function setWidth(w){
+    const clamped = Math.max(min, Math.min(max, Math.round(w)));
+    frame.style.width = clamped + 'px';
+    hud.textContent = `${clamped} × ${height}`;
+    return clamped;
+  }
+
+  handle.addEventListener('mousedown', (e)=>{
+    e.preventDefault();
+    dragging = true; startX = e.clientX; startW = frame.clientWidth;
+    document.body.style.userSelect = 'none';
+    hud.style.opacity = '0.9';
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    const dx = e.clientX - startX;
+    setWidth(startW + dx);
+  });
+  window.addEventListener('mouseup', ()=>{
+    if(!dragging) return;
+    dragging = false;
+    document.body.style.userSelect = '';
+    hud.style.opacity = '0.8';
+  });
+
+  handle.addEventListener('dblclick', ()=> setWidth(initial));
+  handle.tabIndex = 0;
+  handle.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowLeft') setWidth(frame.clientWidth - 10);
+    if(e.key === 'ArrowRight') setWidth(frame.clientWidth + 10);
+    if(e.key.toLowerCase() === 'r') setWidth(initial);
+  });
+
+  window.__setFrameWidth = setWidth;
+}
+
+```
+
 ### src\utils\snapshotFab.js
 ```js
-// Bottom-right SNAP (PDF) button for 1920x1000 capture
+// Bottom-right SNAP button (PNG export, 1920x1000)
+// NOTE: Now exports PNG instead of PDF and auto-names files by current route.
+// Requires: html2canvas
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 
+/**
+ * Install floating SNAP button at bottom-right to export a 1920x1000 PNG.
+ * CSS is injected automatically; no main.css edits required.
+ * - AutoTest filenames:
+ *    - #/auto/editor → 'snapshot_autotest_tescase editor.png'
+ *    - #/auto/run    → 'snapshot_autotest_run test.png'
+ */
 export function mountSnapshotFab(opts={}){
   const {
     selector = '.lv-frame',
     size = [1920, 1000],
+    // filename: optional fallback for non-AutoTest pages
     filename = 'Snapshot'
   } = opts;
 
   if (document.getElementById('at-snap-fab')) return;
 
+  // Inject minimal CSS
   const css = `
   .at-snap-fab{
     position: fixed; right: 20px; bottom: 20px;
@@ -1072,17 +1163,24 @@ export function mountSnapshotFab(opts={}){
   style.textContent = css;
   document.head.appendChild(style);
 
+  // Create button
   const btn = document.createElement('button');
   btn.className = 'at-snap-fab';
   btn.id = 'at-snap-fab';
   btn.type = 'button';
-  btn.title = 'Capture current view (1920×1000)';
+  btn.title = 'Capture current view (1920×1000 PNG)';
   btn.innerHTML = '<span>SNAP</span>';
   document.body.appendChild(btn);
 
   function setBusy(v){ v ? btn.setAttribute('aria-busy','true') : btn.removeAttribute('aria-busy'); }
   function resolveTarget(){
     return document.querySelector(selector) || document.querySelector('#content') || document.querySelector('.app') || document.body;
+  }
+  function routeBasedName(){
+    const h = location.hash || '';
+    if (h.includes('/auto/editor')) return 'snapshot_autotest_tescase editor';
+    if (h.includes('/auto/run'))    return 'snapshot_autotest_run test';
+    return filename || 'Snapshot';
   }
 
   async function capture(){
@@ -1093,6 +1191,8 @@ export function mountSnapshotFab(opts={}){
     try{
       window.scrollTo(0,0);
       const canvas = await html2canvas(el, { backgroundColor:'#ffffff', useCORS:true, scale:1, windowWidth:W, windowHeight:H });
+
+      // Normalize to exact 1920x1000 (cover-fit)
       const out = document.createElement('canvas');
       out.width = W; out.height = H;
       const ctx = out.getContext('2d');
@@ -1103,18 +1203,165 @@ export function mountSnapshotFab(opts={}){
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
       ctx.drawImage(canvas, 0,0, sw,sh, dx,dy, dw,dh);
 
-      const img = out.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: W>=H?'l':'p', unit:'px', format:[W,H] });
-      pdf.addImage(img, 'PNG', 0,0, W,H);
-      const stamp = new Date().toISOString().replace(/[-:T]/g,'').slice(0,15);
-      pdf.save(`${filename}_${stamp}.pdf`);
+      const dataUrl = out.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = routeBasedName() + '.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }catch(err){
-      console.error(err); alert('SNAP 실패 (콘솔 확인)');
+      console.error(err);
+      alert('SNAP 실패 (콘솔 확인)');
     }finally{
       setBusy(false);
     }
   }
+
   btn.addEventListener('click', capture);
+}
+
+```
+
+### src\utils\windowResizer.js
+```js
+// Window-only Horizontal Resizer v2 (outer width only)
+// - Keeps VIEW fixed (PNG cards, borders) at viewWidth × viewHeight
+// - Resizes ONLY the outer window (.lv-window) to simulate left/right gutters
+// - More robust handle placement & dragging (pointer events), container overflow visible
+
+export function mountWindowResizer(opts={}){
+  const {
+    viewSelector = '.lv-frame',
+    viewWidth = 1440,          // widened default
+    viewHeight = 1000,
+    windowWidth = 1920,
+    minWindow = 300 + 1440,    // NAV 300 + VIEW 1440
+    maxWindow = 2880
+  } = opts;
+
+  const view = document.querySelector(viewSelector);
+  if(!view){ console.warn('[WindowResizer] view not found:', viewSelector); return; }
+
+  // Ensure the main content container doesn't clip the handle.
+  const content = document.getElementById('content');
+  if(content){ content.style.overflow = 'visible'; content.style.position = content.style.position || 'relative'; }
+
+  // Create wrapper .lv-window around the fixed VIEW
+  let win = view.closest('.lv-window');
+  if(!win){
+    win = document.createElement('div');
+    win.className = 'lv-window';
+    view.parentNode.insertBefore(win, view);
+    win.appendChild(view);
+  }
+
+  // Style injection
+  const css = `
+    .lv-window{
+      position: relative;
+      margin: 0 auto;
+      width: ${windowWidth}px;           /* OUTER window width */
+      height: ${viewHeight}px;
+      background: transparent;
+      box-sizing: content-box;
+      z-index: 1;                         /* under handle/hud */
+    }
+    .lv-window > ${viewSelector}{
+      width: ${viewWidth}px;              /* FIXED VIEW */
+      height: ${viewHeight}px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+    .lvw-resize-handle{
+      position:absolute; top:0; right:-12px; width: 24px; height:100%;
+      cursor: ew-resize; z-index: 4000;
+      background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,.06) 100%);
+      border-left: 1px solid var(--line);
+    }
+    .lvw-resize-handle::after{
+      content:''; position:absolute; top:50%; left:50%; transform: translate(-50%,-50%);
+      width:6px; height:44px; border-radius:3px; background: rgba(0,0,0,.2);
+      box-shadow: -8px 0 0 rgba(0,0,0,.12), 8px 0 0 rgba(0,0,0,.12);
+      opacity:.25;
+    }
+    .lvw-size-hud{
+      position:absolute; top:8px; right:16px; z-index:4100;
+      padding:4px 8px; background:#000; color:#fff; font-size:12px; border-radius:4px;
+      opacity:.8; pointer-events:none;
+    }
+  `;
+  const style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  // Create handle + HUD once
+  let handle = win.querySelector('.lvw-resize-handle');
+  if(!handle){
+    handle = document.createElement('div');
+    handle.className = 'lvw-resize-handle';
+    win.appendChild(handle);
+  }
+  let hud = win.querySelector('.lvw-size-hud');
+  if(!hud){
+    hud = document.createElement('div');
+    hud.className = 'lvw-size-hud';
+    win.appendChild(hud);
+  }
+
+  function setWindowWidth(w){
+    const clamped = Math.max(minWindow, Math.min(maxWindow, Math.round(w)));
+    win.style.width = clamped + 'px';
+    hud.textContent = `${clamped} × ${viewHeight}`;
+    return clamped;
+  }
+  setWindowWidth(windowWidth);            // initialize
+  view.style.width = viewWidth + 'px';    // VIEW stays fixed
+  view.style.height = viewHeight + 'px';
+
+  // Pointer-based drag
+  let startX = 0;
+  let startW = windowWidth;
+
+  function onPointerDown(e){
+    e.preventDefault();
+    startX = e.clientX;
+    startW = win.getBoundingClientRect().width;
+    handle.setPointerCapture?.(e.pointerId);
+    document.body.style.userSelect = 'none';
+    hud.style.opacity = '0.9';
+  }
+  function onPointerMove(e){
+    if (!handle.hasPointerCapture?.(e.pointerId)) return;
+    const dx = e.clientX - startX;
+    setWindowWidth(startW + dx);
+  }
+  function onPointerUp(e){
+    if (!handle.hasPointerCapture?.(e.pointerId)) return;
+    handle.releasePointerCapture?.(e.pointerId);
+    document.body.style.userSelect = '';
+    hud.style.opacity = '0.8';
+  }
+
+  handle.addEventListener('pointerdown', onPointerDown);
+  handle.addEventListener('pointermove', onPointerMove);
+  handle.addEventListener('pointerup', onPointerUp);
+  handle.addEventListener('pointercancel', onPointerUp);
+
+  // Double-click to reset
+  handle.addEventListener('dblclick', ()=> setWindowWidth(windowWidth));
+
+  // Keyboard nudges
+  handle.tabIndex = 0;
+  handle.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowLeft') setWindowWidth(win.getBoundingClientRect().width - 10);
+    if(e.key === 'ArrowRight') setWindowWidth(win.getBoundingClientRect().width + 10);
+    if(e.key.toLowerCase() === 'r') setWindowWidth(windowWidth);
+  });
+
+  // Expose helper
+  window.__setWindowWidth = setWindowWidth;
 }
 
 ```
@@ -1209,7 +1456,7 @@ export function mountSnapshotFab(opts={}){
       <button class="btn" id="rt-start">Start</button>
       <button class="btn" id="rt-stop">Stop</button>
     </div>
-    <div class="progress" id="rt-progress"><i></i></div>
+    <div class="progress" id="rt-progress"><i></i><span class="pct" id="rt-pct">0%</span></div>
   </section>
 
   <!-- 본문 레이아웃 -->

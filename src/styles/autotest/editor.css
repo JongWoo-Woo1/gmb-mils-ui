@@ -14,5 +14,6 @@
 .at-steps .head{ background:#fafafa; font-weight:700; border:1px solid var(--line); border-bottom:none; }
 #at-step-body .row{ display:grid; grid-template-columns: 100px 1fr 1fr 1fr; border:1px solid var(--line); border-top:none; }
 #at-step-body .cell{ padding:8px 10px; border-right:1px solid var(--line-soft); }
+#at-step-body .cell:first-child input{ text-align:center; } /* Step 입력 가독성 */
 #at-step-body .cell:last-child{ border-right:none; }
 #at-step-body input{ width:100%; height:30px; padding:0 8px; border:1px solid var(--line); background:#fff; font:inherit; }
