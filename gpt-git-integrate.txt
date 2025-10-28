@@ -89,8 +89,4 @@ git rev-parse --short HEAD   # ← 이 해시를 공유
 
 -------
 
-npm run review
-git add -A
-git commit -m "feat: new pupetter and error"
-git push
-git rev-parse --short HEAD   # ← 이 해시를 채팅 맨 앞에 붙여줘
+npm run review -- "변경설명"
