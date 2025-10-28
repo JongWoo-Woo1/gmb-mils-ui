@@ -1,141 +1,124 @@
 # GPT UI 협업 지침 (LabVIEW용 HTML/CSS/JS 자산 작업 전용)
 
-> 이 지침은 **UI 자산(HTML/CSS/JS/webpack → PNG → LabVIEW Import)** 작업에만 적용합니다.  
-> 일반 LabVIEW 코드 논의(로직/드라이버/DAQ 등)에는 적용하지 않습니다.
+> 이 지침은 **UI 자산(HTML/CSS/JS/webpack → PNG/PDF → LabVIEW Import)** 작업에만 적용합니다.  
+> 일반 LabVIEW 로직/드라이버/DAQ 등에는 적용하지 않습니다.
 
 ---
 
-## 0) 기술 컨텍스트 (전제)
+## 0) 프로젝트/레포 정보
+- GitHub: **https://github.com/JongWoo-Woo1/gmb-mils-ui**
+- 리뷰 스냅샷 산출물 경로(리포 내): `docs/ui/ui_review.png`, `docs/ui/ui_review.pdf`  
+  - (GitHub에서 빠른 확인)  
+    - PNG: https://github.com/JongWoo-Woo1/gmb-mils-ui/blob/main/docs/ui/ui_review.png  
+    - PDF: https://github.com/JongWoo-Woo1/gmb-mils-ui/blob/main/docs/ui/ui_review.pdf
 
-- UI 초안은 **HTML + CSS + JavaScript(webpack 번들)** 로 구성되어 있음
-- 목표 산출물: **픽셀 정확한 PNG 자산**(Up/Hover/Active/Disabled, @1x/@2x) → **LabVIEW Control Editor** 로 Import
-- 개발 환경: **Windows 11 + VS Code + GitHub**
-- 줄바꿈/라인엔딩 등 상세 설정은 복잡도 감소를 위해 **초기에 단순화**함
+> 브랜치가 `main`이 아니라면 위 URL의 `main`을 현재 브랜치명으로 바꾸면 됩니다.
 
 ---
 
-## 1) 언제 이 지침을 자동 적용하나요?
-
-다음 키워드/맥락이 감지되면 **UI 모드**로 전환해 이 지침을 적용합니다.
-
+## 1) 언제 이 지침을 자동 적용하나요? (UI 모드)
+다음 키워드/맥락이 보이면 **UI 모드**로 전환해 이 지침을 적용합니다.
 - “UI”, “디자인”, “버튼”, “PNG”, “아이콘”, “스타일”, “CSS”, “webpack”, “Puppeteer”, “자산/에셋 추출”, “LabVIEW 버튼 그림”
 - HTML/CSS/JS 코드나 스크린샷을 첨부하고 **LabVIEW에서 쓸 이미지**를 언급한 경우
 
-> UI 모드가 아니면(순수 LabVIEW 로직/테스트/NI 관련 토픽) 평소 방식으로 대응합니다.
+> UI 모드 외의 내용(순수 LabVIEW 로직/테스트/NI 주제)은 평소 규칙을 사용.
 
 ---
 
 ## 2) 대화 시작 ‘핸드셰이크’ (드리프트 방지)
+- 사용자가 아래 중 하나를 주면 **현재 기준(baseline)** 으로 채택:
+  - `baseline: <짧은해시>` 혹은 `baseline=<짧은해시>` (예: `baseline=8a7c9e2`)
+  - Git 로그/출력에 있는 마지막 줄의 **짧은 해시**를 자동 인식
+- 내가 답변할 때 가능하면 맨 위에 **`baseline=<해시>`**를 표시하여 같은 기준 확인
 
-UI 모드일 때, 저는 다음 규칙으로 **기준 스냅샷**을 인식/고정합니다.
-
-- 사용자가 아래 중 하나를 주면 **현재 기준(baseline)** 으로 채택합니다.
-  - `baseline: <짧은해시>` 예) `baseline: a1b2c3d`
-  - `commit: <짧은해시>` 또는 `HEAD = <짧은해시>`
-  - Git 명령 출력(복붙) 중에서 **마지막 줄의 짧은 해시**를 자동 추출
-- 만약 기준을 못 받았는데 코드 의존 답변이 필요하면,
-  - **일단 일반 가이드/템플릿을 즉시 제시**하고,
-  - 병행해서 “baseline 해시를 알려주면 더 정확히 맞출 수 있다”고 **한 번만** 안내합니다.
-
-> _중요_: 어떤 경우에도 “조금만 기다려” 같은 **비동기/사후 약속** 표현은 하지 않습니다.
+> 기준이 없으면, 즉시 실행 가능한 일반 가이드를 먼저 제시하고 “baseline 제공 시 더 정확히 맞출 수 있음”을 **한 번만** 안내.
 
 ---
 
-## 3) Git 최소 루틴 (초보자 모드)
+## 3) 원커맨드: `npm run review -- "메시지"`
+**한 줄**로 build → PNG/PDF 스냅샷 → git add/commit/push → 해시 출력까지 수행.
 
-UI 자산 작업 흐름에서 제가 제안/사용할 **기본 명령 세트**는 아래와 같습니다.
+### `package.json`
+```jsonc
+{
+  "scripts": {
+    "build": "YOUR_BUILD_COMMAND",        // 예: "webpack --mode production"
+    "review": "node tools/review.mjs"
+  }
+}
+```
 
+### `tools/review.mjs` (오케스트레이터)
+- 해야 할 일: `build` 실행 → `export-ui-review.mjs`로 스냅샷 생성 → git add/commit/push → `baseline=<hash>` 출력
+- 절대 `npm run review`를 다시 호출하지 않음(재귀 방지).
+
+### `tools/export-ui-review.mjs` (스냅샷 생성 전담)
+- **puppeteer-core** 사용(브라우저 다운로드 없이 빠름), 크롬/엣지 자동 탐색 또는 `PUPPETEER_EXECUTABLE_PATH` 환경변수로 지정
+- 대상 HTML 자동 선택(우선순위): **CLI 인자** → `dist/index.html` → `gallery.html`
+- **LOCK 파일**(`.export-ui-review.lock`)로 동시/재귀 실행 차단
+- 매 실행 시 `docs/ui` **비우고 시작** → **고정 파일명**으로 저장: `ui_review.png`, `ui_review.pdf`
+- **1920×1000 고정 뷰포트**, PDF는 **@page size + 0 margin + preferCSSPageSize** 로 1페이지 정확히 출력
+
+> 결과물: `docs/ui/ui_review.png`, `docs/ui/ui_review.pdf` (항상 같은 이름)
+
+### 사용 예
 ```bash
-# (최초 1회) 리포 초기 푸시
-git push -u origin main
-
-# 변경 반영
-git add -A
-git commit -m "feat: <설명>"
-git push
-
-# 기준 해시 공유
-git rev-parse --short HEAD
+npm run review -- "버튼 간격 조정 및 헤더 정렬"
+# 콘솔 마지막 줄에 baseline=<해시> 출력
 ```
-
-- `.gitignore` 최소 항목:
-  ```
-  node_modules/
-  dist/
-  *.log
-  ```
-- 줄바꿈 경고가 있더라도 **기능 영향 없음** → 필요시 나중에 정리(.gitattributes)합니다.
 
 ---
 
-## 4) UI 자산(이미지) 디폴트 파이프라인
-
-- **갤러리 페이지**(컴포넌트/상태를 한 눈에 보는 HTML) 1장 생성
-- **Puppeteer 스크립트**(기본 경로: `/tools/export-assets.mjs`)로 DOM 노드별 투명 PNG 추출
-  - 상태 강제: `.force-hover / .force-active / .force-disabled`
-  - 배율: `@1x, @2x` (추가 필요 시 확장)
-  - 파일명 규칙:
-    ```
-    <name>_up@1x.png
-    <name>_hover@1x.png
-    <name>_active@1x.png
-    <name>_disabled@1x.png
-    (동일한 @2x 세트)
-    ```
-- LabVIEW Import 가이드(요약)
-  - Control Editor → 각 상태에 **동일 크기 PNG** 매핑
-  - Import 후 컨트롤 **크기 변경 금지** (픽셀 매핑 유지)
-  - 폼 리사이즈는 **Scale with Pane 끄기** + Splitter/레이아웃으로 처리
-
-> 사용자가 셀렉터 목록/갤러리 링크를 주면, 저는 즉시 실행 가능한 스크립트/명령을 제공하고 산출물 구조를 제안합니다.
+## 4) PDF/PNG 스냅샷 정책
+- 파일명은 고정:  
+  - `docs/ui/ui_review.png`  
+  - `docs/ui/ui_review.pdf`  
+- **해시는 파일명에 넣지 않음** (혼동 방지). 해시는 콘솔의 `baseline=<hash>`로만 공유.
+- PDF가 두 장으로 보이는 증상이 있을 경우, 아래가 스크립트에 적용되어 있어야 함:
+  - `@page { size: 1920px 1000px; margin: 0; }`
+  - `preferCSSPageSize: true` 로 PDF 생성
+  - `html, body { margin:0; padding:0; overflow:hidden; }`
+  - `page.screenshot({ captureBeyondViewport:false })` (권장)
 
 ---
 
-## 5) 자동 인식 & 응답 규칙
-
-- 사용자가 붙여 넣은 터미널 로그에서 아래를 **자동 추출/기억**(대화 세션 내):
-  - `rev-parse --short HEAD` 출력의 해시
-  - 현재 브랜치 이름(main 등)
-- 제가 답변할 때,
-  - 최상단에 **`baseline=<짧은해시>`** 를 표시해 서로 같은 기준을 재확인합니다(가능할 때).
-  - 코드/스크립트는 **즉시 실행 가능한 형태**로 제공합니다.
-  - 빌드/런/스크린샷 등 **사용자 환경에서 수행해야 하는 단계**는 명확한 커맨드/체크리스트로 제시합니다.
-- **질문 최소화 원칙**: 코드가 없어도 가능한 범위 내에서 **최선의 완성안**을 먼저 제시합니다.
+## 5) LabVIEW Import 가이드(요약)
+- Control Editor에서 상태별(Up/Hover/Active/Disabled) **동일 크기 PNG** 매핑
+- Import 후 컨트롤 **크기 변경 금지**(픽셀 매핑 유지)
+- 폼 리사이즈는 **Scale with Pane 끄기** + Splitter/레이아웃으로
 
 ---
 
-## 6) 요청 포맷(권장, 선택)
-
-사용자가 아래 템플릿을 써 주면 가장 정확합니다.
-
-```
-[UI 작업]
-baseline: <짧은해시>
-브랜치: <이름, 생략 가능>
-목표: <예: 버튼 PNG 추출 자동화>
-메모: <셀렉터 목록 또는 갤러리 URL>
-```
+## 6) 문제 해결(트러블슈팅)
+- `ERR_FILE_NOT_FOUND` (공백/한글 경로): `pathToFileURL` 사용, `dist/index.html`을 인자로 지정해 실행
+  - `node tools/export-ui-review.mjs dist/index.html`
+- puppeteer 설치가 느림: `puppeteer-core` 사용 + `PUPPETEER_EXECUTABLE_PATH`로 로컬 크롬/엣지 지정
+- 무한 실행/재귀: `review.mjs` → (build → export → git) **단방향** 구조 유지, `export-ui-review.mjs`에는 **LOCK + process.exit**
 
 ---
 
 ## 7) 빠른 체크리스트
-
 - [ ] 지금 이 대화가 **UI 작업**인가?
-- [ ] 최신 **baseline 해시** 확보/표시했는가?
-- [ ] 자산 추출/파일명 규칙이 일관적인가(@1x/@2x, 상태 4종)?
-- [ ] LabVIEW Import 시나리오까지 고려했는가?
+- [ ] `npm run review -- "메시지"` 한 줄로 실행했는가?
+- [ ] `docs/ui/ui_review.(png|pdf)` 최신본이 커밋/푸시되었는가?
+- [ ] 채팅 맨 처음에 **`baseline=<해시>`**를 적었는가? (예: `baseline=31ef941`)
+- [ ] (필요 시) 브라우저 경로 지정: `PUPPETEER_EXECUTABLE_PATH="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"`
 
 ---
 
-## 8) 예시 응답 머리말(제가 사용할 형식)
-
+## 8) 예시 대화 포맷
 ```
-baseline=a1b2c3d  (branch: main)
-다음 단계로 PNG 추출 파이프라인을 제안합니다:
-1) /gallery.html에 컴포넌트 나열 (상태 클래스 포함)
-2) /tools/export-assets.mjs 배치 → node 실행
-3) /assets/export/ 하위에 파일명 규칙대로 생성
-...
+baseline=31ef941 (branch: main)
+이번 변경: 네비게이션 폭 240→256, RUN 모니터 라벨 정렬
+피드백 요청: 좌상단 마진/테두리 굵기 확인
 ```
+→ 나는 레포의 `docs/ui/ui_review.pdf`를 열어 **픽셀 피드백**으로 답변.
 
-이 지침은 필요한 경우 점진적으로 업데이트하되, **초보자 난이도**를 유지합니다.
+---
+
+### 부록: 로컬에서 바로 열기 (선택)
+```powershell
+# Windows에서 바로 확인
+start docs\ui\ui_review.pdf
+start docs\ui\ui_review.png
+```
