@@ -85,3 +85,12 @@ git rev-parse --short HEAD   # ← 이 해시를 공유
 --------
 - node_modules/, dist/ 등은 .gitignore에 포함하세요.
 - 줄바꿈 경고(LF/CRLF)는 기능엔 영향이 없지만, 나중에 .gitattributes로 정리하면 더 깔끔합니다.
+
+
+-------
+
+npm run review
+git add -A
+git commit -m "feat: new pupetter and error"
+git push
+git rev-parse --short HEAD   # ← 이 해시를 채팅 맨 앞에 붙여줘

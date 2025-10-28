@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development",
+    "review": "node tools/export-ui-review.mjs",
     "build": "webpack --mode production"
   },
   "devDependencies": {
     "css-loader": "^6.10.0",
     "html-webpack-plugin": "^5.6.0",
+    "puppeteer-core": "^24.26.1",
     "style-loader": "^3.3.4",
     "webpack": "^5.94.0",
     "webpack-cli": "^5.1.4",
