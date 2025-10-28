@@ -1,0 +1,50 @@
+/* 프레임 내부 100% */
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  width: 100%;
+  height: 100%;
+}
+
+/* 사이드바: 아래 여백 줄이고, 내부 간격 살짝 압축 */
+.sidebar {
+  background: var(--white);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 14→12 */
+  padding: 14px; /* 16→14 */
+  padding-bottom: 12px; /* footer 제거 따라 최소화 */
+}
+
+.brand-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.brand img {
+  width: 140px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* 메인 영역은 그대로 */
+.main {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.content {
+  display: grid;
+  gap: 20px;
+}

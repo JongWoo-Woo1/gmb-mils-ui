@@ -1,0 +1,47 @@
+.run-monitor {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 14px;
+  margin-top: 8px; /* nav와 간격 */
+}
+
+.rm-title {
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.rm-row {
+  font-size: 15px;
+  color: var(--ink-700);
+  line-height: 1.28;
+}
+.rm-row + .rm-row {
+  margin-top: 4px;
+}
+.mono {
+  font-family: Consolas, 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0.2px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.chip {
+  display: inline-block;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-weight: 700;
+  line-height: 1;
+  font-size: 13px;
+  padding: 4px 10px;
+}
+
+#rm-line1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,26 @@
+:root {
+  /* LabVIEW 창 크기에 맞춘 고정 프레임 */
+  --panel-w: 1920px;
+  --panel-h: 1000px;
+
+  --shell-bg: #eceff3;
+  --frame-border: #cfd6dd;
+}
+
+.lv-stage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center; /* 창 가운데 배치 */
+  background: var(--shell-bg);
+  padding: 12px; /* 외곽 여백(미리보기용) */
+}
+
+.lv-frame {
+  width: var(--panel-w);
+  height: var(--panel-h);
+  background: var(--bg);
+  border: 1px solid var(--frame-border);
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden; /* 내부 스크롤 방지 */
+}

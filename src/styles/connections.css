@@ -1,0 +1,44 @@
+.connections {
+  margin-top: auto; /* 남은 공간을 위로 밀어 '바닥 고정' */
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 12px;
+  margin-bottom: 0; /* 0으로 바닥에 딱 붙임 */
+}
+.conn-title {
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.conn-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 6px;
+}
+.conn-item + .conn-item {
+  margin-top: 6px;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #d1d5db;
+  background: #d1d5db;
+}
+.dot[data-status='connected'] {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.dot[data-status='disconnected'] {
+  background: #ef4444;
+  border-color: #ef4444;
+}

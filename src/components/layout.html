@@ -1,0 +1,68 @@
+<aside class="sidebar">
+  <header class="brand-bar">
+    <a href="#/dashboard" aria-label="GMB Home" class="brand">
+      <img id="logo" alt="GMB Logo" />
+    </a>
+  </header>
+
+  <nav class="nav">
+    <a class="nav-btn" data-view="dashboard" href="#/dashboard">DASHBOARD</a>
+    <a class="nav-btn" data-view="auto" href="#/auto">AUTO TEST</a>
+    <a class="nav-btn" data-view="manual" href="#/manual">MANUAL TEST</a>
+    <a class="nav-btn" data-view="result" href="#/result">RESULT VIEWER</a>
+    <a class="nav-btn" data-view="settings" href="#/settings">SETTINGS</a>
+  </nav>
+
+  <!-- ▼ Run Monitor : 클릭 시 Idle→Auto→Manual 토글 (데모) -->
+  <section
+    class="run-monitor"
+    id="run-monitor"
+    data-mode="idle"
+    title="Click to toggle (Idle → Auto → Manual)"
+  >
+    <div class="rm-title">Run Monitor</div>
+    <div class="rm-row chips">
+      <span class="chip chip-mode" id="rm-mode">Idle</span>
+      <span class="chip chip-status" id="rm-status">Standby</span>
+    </div>
+    <div class="rm-row" id="rm-line1">No active test</div>
+    <div class="rm-row mono" id="rm-line2">—</div>
+  </section>
+
+  <div class="connections">
+    <div class="conn-title">CONNECTIONS</div>
+    <div class="conn-item" data-key="sim">
+      <span class="label">SIMULATOR</span>
+      <span class="status"
+        ><span class="dot" data-status="connected"></span
+        ><span class="text">Connected</span></span
+      >
+    </div>
+    <div class="conn-item" data-key="vs">
+      <span class="label">VeriStand</span>
+      <span class="status"
+        ><span class="dot" data-status="disconnected"></span
+        ><span class="text">Disconnected</span></span
+      >
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="toolbar">
+    <h1 id="view-title">Dashboard</h1>
+    <div class="toolbar-right">
+      <button
+        id="btn-estop"
+        class="btn estop"
+        data-state="ready"
+        title="E-Stop: Ready"
+      >
+        E-STOP
+      </button>
+      <button class="btn ghost" id="btn-exit" title="Exit Program">Exit</button>
+    </div>
+  </header>
+
+  <section class="content" id="content"></section>
+</main>

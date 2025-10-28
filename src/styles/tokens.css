@@ -1,0 +1,32 @@
+:root {
+  --brand-red: #c8102e;
+  --brand-red-700: #ab0e27;
+  --danger: #991b1b;
+  --ink-900: #171717;
+  --ink-700: #2d2d2d;
+  --ink-500: #6b7280;
+
+  /* line 계층: 외곽, 내부 구분 */
+  --line: #e5e7eb; /* 컨테이너 외곽선 */
+  --line-soft: #f0f2f5; /* 내부 구분선/섹션 바 */
+
+  --bg: #f6f7f9;
+  --white: #fff;
+
+  /* 각진 */
+  --radius: 0;
+
+  /* 여백(밀도 ↓ 10~15%) */
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+
+  --logo-w: 128px;
+  --stripe-w: 4px;
+
+  --state-amber: #f59e0b;
+  --state-amber-900: #7c2d12;
+  --state-red-dark: #7f1d1d;
+}

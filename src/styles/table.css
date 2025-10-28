@@ -1,0 +1,41 @@
+.table-like {
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.table-like .row {
+  display: grid;
+  grid-template-columns: 180px 1fr 140px 120px;
+}
+.table-like .row.head {
+  background: #fafafa;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+.table-like .row > div {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.table-like .row:last-child > div {
+  border-bottom: none;
+}
+
+/* ⬇ 미세 hover로 층위감 */
+.table-like .row:not(.head):hover {
+  background: #fafafa;
+}
+
+/* 시간/케이스를 고정폭 숫자체로 */
+.table-like .row > div:nth-child(1),
+.table-like .row > div:nth-child(2) {
+  font-family: Consolas, 'Courier New', ui-monospace, monospace;
+  letter-spacing: 0.2px;
+}
+
+.pass {
+  color: #15803d;
+  font-weight: 700;
+}
+.fail {
+  color: #b91c1c;
+  font-weight: 700;
+}

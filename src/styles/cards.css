@@ -1,0 +1,27 @@
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 24px;
+}
+.card h2 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: 18px;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--line-soft); /* 은은한 top-rule */
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.tile {
+  height: 120px;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-500);
+  background: #fff;
+}

@@ -1,0 +1,30 @@
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  height: 56px;
+  font-size: 18px;
+  padding: 0 18px;
+}
+.nav-btn:is(:hover, :focus-visible) {
+  outline: none;
+  border-color: var(--brand-red);
+  background: #f8fafc;
+}
+.nav-btn.is-active {
+  border-color: var(--line);
+  box-shadow: inset var(--stripe-w) 0 0 0 var(--brand-red);
+  background: #fff;
+  color: var(--ink-900);
+}
