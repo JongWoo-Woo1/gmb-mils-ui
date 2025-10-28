@@ -1,7 +1,7 @@
 # Code Snapshot
 
-- commit: 04309c8  (branch: main)
-- generated: 2025-10-28 05:45:39
+- commit: 220a6df  (branch: main)
+- generated: 2025-10-28 12:01:51
 - include: src, tools + package.json, webpack.config.js
 - exclude dirs: node_modules, dist, docs, .git, .github, assets
 - exclude files: package-lock.json
@@ -473,7 +473,7 @@ a {
 /* 프레임 내부 100% */
 .app {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 260px 1fr; /* Run Monitor 넓게 */
   width: 100%;
   height: 100%;
 }
@@ -546,12 +546,16 @@ a {
 .run-monitor {
   border: 1px solid var(--line);
   background: #fff;
+
   padding: 14px;
-  margin-top: 8px; /* nav와 간격 */
+  margin-top: 12px; /* nav와 간격 약간 확보 */
+  height: 360px; /* ← 고정 높이(필요시 320~400 조절) */
+  display: flex;
+  flex-direction: column;
 }
 
 .rm-title {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-500);
   margin-bottom: 8px;
   letter-spacing: 0.3px;
@@ -562,7 +566,7 @@ a {
   color: var(--ink-700);
   line-height: 1.28;
 }
-.rm-row + .rm-row {
+.rm-row .rm-row {
   margin-top: 4px;
 }
 .mono {
@@ -589,6 +593,48 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ▼ AUTO TEST 섹션(스크롤 영역 포함) */
+.rm-subtitle {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-500);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.rm-scroll {
+  margin-top: 6px;
+  overflow: auto; /* 고정 높이 내에서 리스트 스크롤 */
+}
+.rm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.rm-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  font-size: 13px;
+  background: #fff;
+}
+.rm-item .task {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rm-item .meta {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--ink-600);
 }
 
 ```
