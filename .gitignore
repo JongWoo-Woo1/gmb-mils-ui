@@ -5,20 +5,3 @@ build/
 .out/
 out/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# editor/OS
-.DS_Store
-Thumbs.db
-.vscode/
-!.vscode/extensions.json
-!.vscode/settings.json
-
-# bundles/archives
-*.zip
-*.7z
-
-# puppeteer export (있다면)
-assets/export/
