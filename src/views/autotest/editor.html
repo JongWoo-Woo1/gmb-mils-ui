@@ -1,0 +1,54 @@
+<div class="at-root">
+  <div class="at-tabs">
+    <a href="#/auto/editor" class="tab is-active">TESTCASE EDITOR</a>
+    <a href="#/auto/run" class="tab">RUN TEST</a>
+  </div>
+
+  <!-- 상단: 파일 임포트 + 전역 변수 -->
+  <section class="card at-top">
+    <div class="at-top-grid">
+      <div class="at-import">
+        <div class="caption">Import Excel/CSV</div>
+        <div class="drop" id="at-drop">
+          <div>Drag &amp; Drop or</div>
+          <label class="btn" for="at-file">Choose File</label>
+          <input id="at-file" type="file" accept=".xlsx,.xls,.csv" hidden/>
+          <div class="muted" id="at-file-name">No file selected</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="at-validate">Validate</button>
+          <button class="btn" id="at-save">Save</button>
+          <button class="btn ghost" id="at-go-run">Go to Run</button>
+        </div>
+      </div>
+
+      <div class="at-vars card">
+        <div class="caption">Global Variables</div>
+        <div class="kv">
+          <div class="row head"><div class="cell">Variable</div><div class="cell">Value</div><div class="cell">Unit</div></div>
+          <div class="row"><div class="cell">Voltage Set</div><div class="cell"><input id="v-set" value="12.0"/></div><div class="cell">V</div></div>
+          <div class="row"><div class="cell">Current Limit</div><div class="cell"><input id="i-limit" value="500"/></div><div class="cell">mA</div></div>
+          <div class="row"><div class="cell">Soak Time</div><div class="cell"><input id="soak" value="5"/></div><div class="cell">s</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 하단: Test Steps 에디터 -->
+  <section class="card at-steps">
+    <div class="caption">Test Steps</div>
+    <div class="grid head">
+      <div class="cell">Step</div>
+      <div class="cell">Input1</div>
+      <div class="cell">Input2</div>
+      <div class="cell">Expected</div>
+    </div>
+    <div id="at-step-body">
+      <!-- rows injected -->
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="at-add-row">Add Step</button>
+      <button class="btn ghost" id="at-export">Export CSV</button>
+    </div>
+  </section>
+</div>

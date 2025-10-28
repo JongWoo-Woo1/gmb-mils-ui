@@ -9,6 +9,9 @@ import manualHtml from './views/manual.html';
 import resultHtml from './views/result.html';
 import settingHtml from './views/settings.html';
 
+import { initAutoEditor } from './autotest/editor';
+import { initAutoRun } from './autotest/run';
+
 // 문자열 → DocumentFragment 변환 헬퍼 (템플릿으로 안전하게)
 const toFragment = (html) => {
   const t = document.createElement('template');
@@ -34,15 +37,22 @@ const contentEl = document.getElementById('content');
 
 function setActiveNav(key) {
   document.querySelectorAll('.nav-btn').forEach((a) => {
-    a.classList.toggle('is-active', a.dataset.view === key);
+    const k = key.startsWith('auto/') ? 'auto' : key;
+    a.classList.toggle('is-active', a.dataset.view === k);
   });
 }
 function renderRoute() {
   const key = location.hash.replace('#/', '') || 'dashboard';
+  if (key === 'auto') {
+    location.hash = '#/auto/editor';
+    return;
+  }
   const page = routes[key] || routes.dashboard;
   titleEl.textContent = page.title;
   contentEl.replaceChildren(page.frag.cloneNode(true)); // ← DOM 복제해서 삽입
   setActiveNav(key);
+  if (key === 'auto/editor') initAutoEditor();
+  if (key === 'auto/run') initAutoRun();
 }
 window.addEventListener('hashchange', renderRoute);
 renderRoute();

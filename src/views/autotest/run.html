@@ -1,0 +1,43 @@
+<div class="at-run-root">
+  <div class="at-tabs">
+    <a href="#/auto/editor" class="tab">TESTCASE EDITOR</a>
+    <a href="#/auto/run" class="tab is-active">RUN TEST</a>
+  </div>
+
+  <!-- 상단 컨트롤 -->
+  <section class="card at-ctrl">
+    <div class="btn-row">
+      <button class="btn" id="rt-load">Load Case</button>
+      <button class="btn" id="rt-start">Start</button>
+      <button class="btn" id="rt-stop">Stop</button>
+    </div>
+    <div class="progress" id="rt-progress"><i></i></div>
+  </section>
+
+  <!-- 본문 레이아웃 -->
+  <section class="at-run-grid">
+    <div class="card at-chart">
+      <div class="caption">Realtime Graph</div>
+      <div class="chart" id="rt-chart">
+        <canvas id="rt-canvas" width="600" height="300"></canvas>
+      </div>
+    </div>
+
+    <div class="card at-steps">
+      <div class="caption">Steps</div>
+      <ol id="rt-steps" class="step-list">
+      </ol>
+      <div class="muted">현재 진행중인 스텝은 강조 표시됩니다.</div>
+    </div>
+  </section>
+
+  <section class="card at-ind">
+    <div class="caption">Indicators</div>
+    <div class="ind-grid">
+      <div class="ind"><div class="k">Voltage</div><div class="v" id="ind-v">—</div></div>
+      <div class="ind"><div class="k">Current</div><div class="v" id="ind-i">—</div></div>
+      <div class="ind"><div class="k">Temp</div><div class="v" id="ind-t">—</div></div>
+      <div class="ind"><div class="k">Step</div><div class="v" id="ind-step">—</div></div>
+    </div>
+  </section>
+</div>

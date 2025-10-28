@@ -1,0 +1,20 @@
+.at-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.tab { padding:8px 12px; border:1px solid var(--line); background:#fff; font-size:13px; }
+.tab.is-active { border-color: var(--brand-red); }
+
+.at-ctrl .btn-row{ display:flex; gap:8px; }
+.progress{ border:1px solid var(--line); height:16px; margin-top:10px; position:relative; background:#fff; }
+.progress>i{ position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--brand-red); }
+
+.at-run-grid{ display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-top:12px; }
+.at-chart{ padding:12px; }
+.chart{ border:1px solid var(--line); background:#fff; padding:10px; display:grid; place-items:center; }
+
+.step-list{ margin:0; padding-left:18px; max-height:360px; overflow:auto; }
+.step-list li{ padding:6px 0; border-bottom:1px solid var(--line-soft); }
+.step-list li.is-active{ font-weight:700; }
+
+.at-ind .ind-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-top:8px; }
+.ind{ border:1px solid var(--line); background:#fff; padding:10px; }
+.ind .k{ font-size:12px; color:var(--ink-500); }
+.ind .v{ font-size:18px; font-weight:700; margin-top:2px; }

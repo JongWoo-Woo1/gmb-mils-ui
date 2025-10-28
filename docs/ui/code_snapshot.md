@@ -1,7 +1,7 @@
 # Code Snapshot
 
-- commit: 220a6df  (branch: main)
-- generated: 2025-10-28 12:01:51
+- commit: 29f933e  (branch: main)
+- generated: 2025-10-28 12:49:24
 - include: src, tools + package.json, webpack.config.js
 - exclude dirs: node_modules, dist, docs, .git, .github, assets
 - exclude files: package-lock.json
@@ -12,11 +12,17 @@
 
 **src/**
 ```
+├─autotest
+│ ├─editor.js
+│ └─run.js
 ├─components
 │ └─layout.html
 ├─index.html
 ├─index.js
 ├─styles
+│ ├─autotest
+│ │ ├─editor.css
+│ │ └─run.css
 │ ├─base.css
 │ ├─cards.css
 │ ├─connections.css
@@ -31,6 +37,9 @@
 │ └─toolbar.css
 └─views
   ├─auto.html
+  ├─autotest
+  │ ├─editor.html
+  │ └─run.html
   ├─dashboard.html
   ├─manual.html
   ├─result.html
@@ -76,6 +85,152 @@
 
 ```
 
+### src\autotest\editor.js
+```js
+export function initAutoEditor(){
+  const root = document.querySelector('.at-root');
+  if(!root) return;
+
+  const fileInput = root.querySelector('#at-file');
+  const fileName  = root.querySelector('#at-file-name');
+  const body      = root.querySelector('#at-step-body');
+
+  function addRow(values=['', '', '', '']){
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="cell"><input value="${values[0] ?? ''}" /></div>
+      <div class="cell"><input value="${values[1] ?? ''}" /></div>
+      <div class="cell"><input value="${values[2] ?? ''}" /></div>
+      <div class="cell"><input value="${values[3] ?? ''}" /></div>`;
+    body.appendChild(row);
+  }
+
+  // 초기 3행
+  ['1','2','3'].forEach(n => addRow([n, '', '', '']));
+
+  // 파일 임포트 (CSV 간이 미리보기)
+  fileInput?.addEventListener('change', () => {
+    const f = fileInput.files?.[0];
+    if(!f) return;
+    fileName.textContent = f.name;
+    if (/\.csv$/i.test(f.name)) {
+      const rd = new FileReader();
+      rd.onload = () => {
+        // 간단 CSV 파서 (쉼표 기준, 첫줄 헤더 스킵)
+        const lines = String(rd.result).split(/\r?\n/).filter(Boolean);
+        const rows  = lines.slice(1).map(s => s.split(','));
+        body.replaceChildren();
+        rows.slice(0, 50).forEach(r => addRow([r[0], r[1], r[2], r[3]]));
+      };
+      rd.readAsText(f);
+    } else {
+      // XLSX/XLS는 후속에 SheetJS 등 연동
+      alert('XLSX 미리보기는 추후 연동 예정입니다. CSV로 임시 확인 가능합니다.');
+    }
+  });
+
+  root.querySelector('#at-add-row')?.addEventListener('click', () => addRow());
+
+  root.querySelector('#at-validate')?.addEventListener('click', () => {
+    // 매우 간단한 검증 데모: Step 번호 정수 확인
+    const ok = [...body.querySelectorAll('.row')].every(row => {
+      const v = row.querySelector('.cell:first-child input')?.value?.trim();
+      return /^\d+$/.test(v);
+    });
+    alert(ok ? 'Validation OK' : 'Step 번호 오류가 있습니다.');
+  });
+
+  root.querySelector('#at-export')?.addEventListener('click', () => {
+    const rows = [...body.querySelectorAll('.row')].map(row =>
+      [...row.querySelectorAll('input')].map(i => i.value.replace(/,/g,''))
+    );
+    const csv = ['Step,Input1,Input2,Expected', ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'TestCase.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  root.querySelector('#at-go-run')?.addEventListener('click', () => {
+    location.hash = '#/auto/run';
+  });
+}
+
+```
+
+### src\autotest\run.js
+```js
+export function initAutoRun(){
+  const root = document.querySelector('.at-run-root');
+  if(!root) return;
+
+  const stepsEl = root.querySelector('#rt-steps');
+  const bar = root.querySelector('#rt-progress > i');
+
+  // 데모 스텝 목록 (실제론 Editor/파일에서 로딩)
+  const steps = Array.from({length: 30}, (_,i)=>`Step ${i+1}  •  Do something`);
+  stepsEl.replaceChildren(...steps.map((t)=> {
+    const li = document.createElement('li'); li.textContent = t; return li;
+  }));
+
+  const indV = root.querySelector('#ind-v');
+  const indI = root.querySelector('#ind-i');
+  const indT = root.querySelector('#ind-t');
+  const indStep = root.querySelector('#ind-step');
+
+  // 아주 가벼운 캔버스 렌더(임시)
+  const canvas = root.querySelector('#rt-canvas');
+  const ctx = canvas?.getContext('2d');
+
+  let idx = 0, prog = 0, timer = null;
+  function tick(){
+    prog = Math.min(100, prog + 0.5);
+    idx = Math.min(steps.length-1, Math.floor((prog/100)*steps.length));
+    bar.style.width = prog + '%';
+
+    // 스텝 하이라이트
+    [...stepsEl.children].forEach((li,i)=> li.classList.toggle('is-active', i===idx));
+    indStep.textContent = `${idx+1}/${steps.length}`;
+
+    // 인디케이터
+    const v = +(12 + Math.sin(prog/8)).toFixed(2);
+    const i = 450 + ((Math.random()*20) | 0);
+    const t = +(25 + Math.cos(prog/10)).toFixed(1);
+    indV.textContent = `${v} V`; indI.textContent = `${i} mA`; indT.textContent = `${t} °C`;
+
+    // 간이 그래프
+    if(ctx){
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle = '#e5e7eb'; ctx.strokeRect(0,0,canvas.width,canvas.height);
+      ctx.beginPath();
+      for(let x=0;x<canvas.width;x++){
+        const y = 150 + 40*Math.sin((x+prog*3)/30);
+        if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle = '#ef4444'; ctx.stroke();
+    }
+
+    if (prog >= 100){ clearInterval(timer); }
+  }
+
+  root.querySelector('#rt-load')?.addEventListener('click', ()=> {
+    alert('Load Test Case (실제 로딩 로직 연동 지점)');
+  });
+  root.querySelector('#rt-start')?.addEventListener('click', ()=> {
+    clearInterval(timer); prog = 0; idx = 0; tick(); timer = setInterval(tick, 50);
+  });
+  root.querySelector('#rt-stop')?.addEventListener('click', ()=> {
+    clearInterval(timer); bar.style.width = '0%';
+    [...stepsEl.children].forEach(li=> li.classList.remove('is-active'));
+    indStep.textContent = '—';
+  });
+}
+
+```
+
 ### src\components\layout.html
 ```html
 <aside class="sidebar">
@@ -87,7 +242,7 @@
 
   <nav class="nav">
     <a class="nav-btn" data-view="dashboard" href="#/dashboard">DASHBOARD</a>
-    <a class="nav-btn" data-view="auto" href="#/auto">AUTO TEST</a>
+    <a class="nav-btn" data-view="auto" href="#/auto/editor">AUTO TEST</a>
     <a class="nav-btn" data-view="manual" href="#/manual">MANUAL TEST</a>
     <a class="nav-btn" data-view="result" href="#/result">RESULT VIEWER</a>
     <a class="nav-btn" data-view="settings" href="#/settings">SETTINGS</a>
@@ -189,6 +344,9 @@ import manualHtml from './views/manual.html';
 import resultHtml from './views/result.html';
 import settingHtml from './views/settings.html';
 
+import { initAutoEditor } from './autotest/editor';
+import { initAutoRun } from './autotest/run';
+
 // 문자열 → DocumentFragment 변환 헬퍼 (템플릿으로 안전하게)
 const toFragment = (html) => {
   const t = document.createElement('template');
@@ -214,15 +372,22 @@ const contentEl = document.getElementById('content');
 
 function setActiveNav(key) {
   document.querySelectorAll('.nav-btn').forEach((a) => {
-    a.classList.toggle('is-active', a.dataset.view === key);
+    const k = key.startsWith('auto/') ? 'auto' : key;
+    a.classList.toggle('is-active', a.dataset.view === k);
   });
 }
 function renderRoute() {
   const key = location.hash.replace('#/', '') || 'dashboard';
+  if (key === 'auto') {
+    location.hash = '#/auto/editor';
+    return;
+  }
   const page = routes[key] || routes.dashboard;
   titleEl.textContent = page.title;
   contentEl.replaceChildren(page.frag.cloneNode(true)); // ← DOM 복제해서 삽입
   setActiveNav(key);
+  if (key === 'auto/editor') initAutoEditor();
+  if (key === 'auto/run') initAutoRun();
 }
 window.addEventListener('hashchange', renderRoute);
 renderRoute();
@@ -347,6 +512,54 @@ function cycleMode() {
 
 monitorEl.addEventListener('click', cycleMode);
 setMonitor(Modes.IDLE); // 초기값
+
+```
+
+### src\styles\autotest\editor.css
+```css
+.at-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.tab { padding:8px 12px; border:1px solid var(--line); background:#fff; font-size:13px; }
+.tab.is-active { border-color: var(--brand-red); }
+
+.at-top-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+.drop { border:1px dashed var(--line); background:#fff; padding:14px; text-align:center; }
+.btn-row { display:flex; gap:8px; margin-top:10px; }
+.kv .row{ display:grid; grid-template-columns: 200px 1fr 80px; }
+.kv .head{ background:#fafafa; font-weight:700; border-bottom:1px solid var(--line); }
+.kv .cell{ padding:8px 10px; border-bottom:1px solid var(--line-soft); }
+.kv input{ width:100%; height:32px; padding:0 8px; border:1px solid var(--line); background:#fff; font:inherit; }
+
+.at-steps .grid{ display:grid; grid-template-columns: 100px 1fr 1fr 1fr; }
+.at-steps .head{ background:#fafafa; font-weight:700; border:1px solid var(--line); border-bottom:none; }
+#at-step-body .row{ display:grid; grid-template-columns: 100px 1fr 1fr 1fr; border:1px solid var(--line); border-top:none; }
+#at-step-body .cell{ padding:8px 10px; border-right:1px solid var(--line-soft); }
+#at-step-body .cell:last-child{ border-right:none; }
+#at-step-body input{ width:100%; height:30px; padding:0 8px; border:1px solid var(--line); background:#fff; font:inherit; }
+
+```
+
+### src\styles\autotest\run.css
+```css
+.at-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.tab { padding:8px 12px; border:1px solid var(--line); background:#fff; font-size:13px; }
+.tab.is-active { border-color: var(--brand-red); }
+
+.at-ctrl .btn-row{ display:flex; gap:8px; }
+.progress{ border:1px solid var(--line); height:16px; margin-top:10px; position:relative; background:#fff; }
+.progress>i{ position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--brand-red); }
+
+.at-run-grid{ display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-top:12px; }
+.at-chart{ padding:12px; }
+.chart{ border:1px solid var(--line); background:#fff; padding:10px; display:grid; place-items:center; }
+
+.step-list{ margin:0; padding-left:18px; max-height:360px; overflow:auto; }
+.step-list li{ padding:6px 0; border-bottom:1px solid var(--line-soft); }
+.step-list li.is-active{ font-weight:700; }
+
+.at-ind .ind-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-top:8px; }
+.ind{ border:1px solid var(--line); background:#fff; padding:10px; }
+.ind .k{ font-size:12px; color:var(--ink-500); }
+.ind .v{ font-size:18px; font-weight:700; margin-top:2px; }
 
 ```
 
@@ -538,6 +751,9 @@ a {
 @import './table.css';
 @import './responsive.css';
 @import './monitor.css';
+
+@import './autotest/editor.css';
+@import './autotest/run.css';
 
 ```
 
@@ -879,6 +1095,113 @@ a {
     <div class="tile">Start Queue</div>
     <div class="tile">Clear Queue</div>
   </div>
+</div>
+
+```
+
+### src\views\autotest\editor.html
+```html
+<div class="at-root">
+  <div class="at-tabs">
+    <a href="#/auto/editor" class="tab is-active">TESTCASE EDITOR</a>
+    <a href="#/auto/run" class="tab">RUN TEST</a>
+  </div>
+
+  <!-- 상단: 파일 임포트 + 전역 변수 -->
+  <section class="card at-top">
+    <div class="at-top-grid">
+      <div class="at-import">
+        <div class="caption">Import Excel/CSV</div>
+        <div class="drop" id="at-drop">
+          <div>Drag &amp; Drop or</div>
+          <label class="btn" for="at-file">Choose File</label>
+          <input id="at-file" type="file" accept=".xlsx,.xls,.csv" hidden/>
+          <div class="muted" id="at-file-name">No file selected</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="at-validate">Validate</button>
+          <button class="btn" id="at-save">Save</button>
+          <button class="btn ghost" id="at-go-run">Go to Run</button>
+        </div>
+      </div>
+
+      <div class="at-vars card">
+        <div class="caption">Global Variables</div>
+        <div class="kv">
+          <div class="row head"><div class="cell">Variable</div><div class="cell">Value</div><div class="cell">Unit</div></div>
+          <div class="row"><div class="cell">Voltage Set</div><div class="cell"><input id="v-set" value="12.0"/></div><div class="cell">V</div></div>
+          <div class="row"><div class="cell">Current Limit</div><div class="cell"><input id="i-limit" value="500"/></div><div class="cell">mA</div></div>
+          <div class="row"><div class="cell">Soak Time</div><div class="cell"><input id="soak" value="5"/></div><div class="cell">s</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 하단: Test Steps 에디터 -->
+  <section class="card at-steps">
+    <div class="caption">Test Steps</div>
+    <div class="grid head">
+      <div class="cell">Step</div>
+      <div class="cell">Input1</div>
+      <div class="cell">Input2</div>
+      <div class="cell">Expected</div>
+    </div>
+    <div id="at-step-body">
+      <!-- rows injected -->
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="at-add-row">Add Step</button>
+      <button class="btn ghost" id="at-export">Export CSV</button>
+    </div>
+  </section>
+</div>
+
+```
+
+### src\views\autotest\run.html
+```html
+<div class="at-run-root">
+  <div class="at-tabs">
+    <a href="#/auto/editor" class="tab">TESTCASE EDITOR</a>
+    <a href="#/auto/run" class="tab is-active">RUN TEST</a>
+  </div>
+
+  <!-- 상단 컨트롤 -->
+  <section class="card at-ctrl">
+    <div class="btn-row">
+      <button class="btn" id="rt-load">Load Case</button>
+      <button class="btn" id="rt-start">Start</button>
+      <button class="btn" id="rt-stop">Stop</button>
+    </div>
+    <div class="progress" id="rt-progress"><i></i></div>
+  </section>
+
+  <!-- 본문 레이아웃 -->
+  <section class="at-run-grid">
+    <div class="card at-chart">
+      <div class="caption">Realtime Graph</div>
+      <div class="chart" id="rt-chart">
+        <canvas id="rt-canvas" width="600" height="300"></canvas>
+      </div>
+    </div>
+
+    <div class="card at-steps">
+      <div class="caption">Steps</div>
+      <ol id="rt-steps" class="step-list">
+      </ol>
+      <div class="muted">현재 진행중인 스텝은 강조 표시됩니다.</div>
+    </div>
+  </section>
+
+  <section class="card at-ind">
+    <div class="caption">Indicators</div>
+    <div class="ind-grid">
+      <div class="ind"><div class="k">Voltage</div><div class="v" id="ind-v">—</div></div>
+      <div class="ind"><div class="k">Current</div><div class="v" id="ind-i">—</div></div>
+      <div class="ind"><div class="k">Temp</div><div class="v" id="ind-t">—</div></div>
+      <div class="ind"><div class="k">Step</div><div class="v" id="ind-step">—</div></div>
+    </div>
+  </section>
 </div>
 
 ```

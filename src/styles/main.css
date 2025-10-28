@@ -11,3 +11,6 @@
 @import './table.css';
 @import './responsive.css';
 @import './monitor.css';
+
+@import './autotest/editor.css';
+@import './autotest/run.css';
