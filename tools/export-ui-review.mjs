@@ -4,51 +4,43 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const VIEWPORT = { width: 1920, height: 1000, deviceScaleFactor: 1 };
-const OUT_DIR = 'docs/ui';
-const LOCK = path.resolve('.export-ui-review.lock');
-
-// --- 0) puppeteer 동적 임포트 (core 우선, 실패 시 puppeteer) ---
+// ---- Puppeteer 동적 임포트 (core 우선) ----
 let puppeteer;
 try {
   puppeteer = (await import('puppeteer-core')).default;
 } catch {
-  try {
-    puppeteer = (await import('puppeteer')).default;
-  } catch {
-    console.error(
-      '❌ puppeteer-core / puppeteer 가 설치되어 있지 않습니다.\n' +
-        '   npm i -D puppeteer-core    (권장)\n' +
-        '   또는\n' +
-        '   npm i -D puppeteer'
-    );
-    process.exit(1);
-  }
+  puppeteer = (await import('puppeteer')).default;
 }
 
-// --- 1) 재실행 방지: 파일 LOCK ---
+const VIEWPORT = { width: 1920, height: 1000, deviceScaleFactor: 1 };
+const OUT_DIR = 'docs/ui';
+const LOCK = path.resolve('.export-ui-review.lock');
+
+// ── 0) 재실행 방지 ─────────────────────────
 try {
-  const fd = fs.openSync(LOCK, 'wx'); // 이미 있으면 예외
-  fs.closeSync(fd);
+  fs.closeSync(fs.openSync(LOCK, 'wx'));
 } catch {
   console.error('⚠ export-ui-review: already running, exit.');
   process.exit(0);
 }
 
-// --- 2) 타깃 HTML 자동 선택 (CLI 인자 > dist/index.html > gallery.html) ---
-const arg = process.argv[2];
-const candidates = [arg, 'dist/index.html', 'gallery.html'].filter(Boolean);
+// ── 1) 입력/대상 결정 ───────────────────────
+const htmlArg = process.argv[2];
+const candidates = [htmlArg, 'dist/index.html', 'gallery.html'].filter(Boolean);
 const TARGET_HTML = candidates.find((p) => p && fs.existsSync(path.resolve(p)));
 if (!TARGET_HTML) {
-  console.error(
-    '❌ 대상 HTML을 찾지 못했습니다. dist/index.html 또는 gallery.html이 필요합니다.'
-  );
+  console.error('❌ dist/index.html 또는 gallery.html 이 필요합니다.');
   cleanupAndExit(1);
 }
 const absHtmlPath = path.resolve(TARGET_HTML);
 const fileUrl = pathToFileURL(absHtmlPath).href;
 
-// --- 3) 브라우저 실행 파일 자동 탐색(환경변수 우선) ---
+// 타깃 요소 셀렉터: 기본 .lv-stage, 환경변수/CLI(3번째 인자)로 재정의 가능
+const TARGET_SELECTOR =
+  process.env.REVIEW_SELECTOR || process.argv[3] || '.lv-stage';
+const PADDING = 0; // 필요 시 여백(px)
+
+// ── 2) 브라우저 경로 탐색 ───────────────────
 const guessExePaths = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -59,24 +51,25 @@ const guessExePaths = [
 const executablePath = guessExePaths.find((p) => fs.existsSync(p));
 if (!executablePath) {
   console.error(
-    '❌ Chrome/Edge 실행 파일을 찾지 못했습니다.\n' +
-      '   PUPPETEER_EXECUTABLE_PATH 환경변수로 경로를 지정하세요.'
+    '❌ Chrome/Edge 실행 파일을 찾지 못했습니다. PUPPETEER_EXECUTABLE_PATH 를 설정하세요.'
   );
   cleanupAndExit(1);
 }
 
-// --- 4) 현재 커밋 해시(로그용) ---
+// ── 3) 커밋 해시(로그) ──────────────────────
 let SHORT = 'working';
 try {
   SHORT = execSync('git rev-parse --short HEAD').toString().trim();
 } catch {}
 
+// ── 4) 실행 본문 ────────────────────────────
 (async () => {
   try {
-    // --- 5) 출력 폴더 정리: docs/ui 비우고 시작 ---
+    // 출력 폴더 정리
     await fs.promises.mkdir(OUT_DIR, { recursive: true });
-    const entries = await fs.promises.readdir(OUT_DIR, { withFileTypes: true });
-    for (const e of entries) {
+    for (const e of await fs.promises.readdir(OUT_DIR, {
+      withFileTypes: true,
+    })) {
       if (e.name === '.gitkeep') continue;
       await fs.promises.rm(path.join(OUT_DIR, e.name), {
         recursive: true,
@@ -88,37 +81,85 @@ try {
     console.log('▶ Target HTML :', absHtmlPath);
     console.log('▶ URL         :', fileUrl);
     console.log('▶ Commit      :', SHORT);
+    console.log('▶ Selector    :', TARGET_SELECTOR);
 
     const browser = await puppeteer.launch({
       headless: 'new',
       executablePath,
-      defaultViewport: VIEWPORT,
+      defaultViewport: { ...VIEWPORT }, // 기본 1920×1000
       args: ['--disable-dev-shm-usage', '--no-sandbox'],
     });
     const page = await browser.newPage();
 
-    // 열기 + 뷰포트 보정
     await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 60_000 });
-    await page.setViewport(VIEWPORT);
 
-    // PDF가 정확히 1920×1000 한 장으로 나오게 강제
-    await page.addStyleTag({
-      content: `
-        html, body { margin:0; padding:0; background:transparent; overflow:hidden; }
-        @page { size: 1920px 1000px; margin: 0; }
-        @media print { html, body { margin:0; } }
-      `,
+    // 타깃 요소 대기 + 정보 수집
+    const el = await page.waitForSelector(TARGET_SELECTOR, {
+      visible: true,
+      timeout: 30_000,
+    });
+    await el.evaluate((n) =>
+      n.scrollIntoView({ block: 'start', inline: 'start' })
+    );
+
+    // 요소 bbox(CSS px)
+    let box = await el.boundingBox();
+    if (!box) throw new Error(`Target not measurable: ${TARGET_SELECTOR}`);
+
+    // 정수 보정 + 패딩
+    let clip = {
+      x: Math.max(0, Math.floor(box.x) - PADDING),
+      y: Math.max(0, Math.floor(box.y) - PADDING),
+      width: Math.ceil(box.width) + PADDING * 2,
+      height: Math.ceil(box.height) + PADDING * 2,
+    };
+
+    // 1920×1000 강제(요구 해상도와 맞추기) — lv-stage가 그 크기여야 함
+    // 만약 lv-frame/#app을 찍고 싶으면 SELECTOR를 바꾸세요.
+    clip.width = 1920;
+    clip.height = 1000;
+
+    console.log('▶ Measured bbox:', box);
+    console.log('▶ Clip (final) :', clip);
+
+    // 뷰포트가 clip을 모두 포함하도록 보정
+    await page.setViewport({
+      width: Math.max(VIEWPORT.width, Math.ceil(clip.x + clip.width)),
+      height: Math.max(VIEWPORT.height, Math.ceil(clip.y + clip.height)),
+      deviceScaleFactor: VIEWPORT.deviceScaleFactor,
     });
 
-    // 고정 파일명
+    // PNG (클립 캡처)
     const pngPath = path.join(OUT_DIR, 'ui_review.png');
+    const pngBase64 = await page.screenshot({
+      clip,
+      encoding: 'base64',
+      captureBeyondViewport: false,
+    });
+    await fs.promises.writeFile(pngPath, Buffer.from(pngBase64, 'base64'));
+
+    // PDF: PNG를 data URL 페이지에 정확히 1920×1000으로 꽉 채워 넣어 1장 출력
     const pdfPath = path.join(OUT_DIR, 'ui_review.pdf');
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8"/>
+          <style>
+            @page { size: 1920px 1000px; margin:0; }
+            html, body { margin:0; padding:0; }
+            img { display:block; width:1920px; height:1000px; }
+          </style>
+        </head>
+        <body>
+          <img src="data:image/png;base64,${pngBase64}" />
+        </body>
+      </html>`;
+    const dataUrl =
+      'data:text/html;base64,' + Buffer.from(html).toString('base64');
 
-    // PNG
-    await page.screenshot({ path: pngPath, captureBeyondViewport: false });
-
-    // PDF (1페이지만, CSS 사이즈 우선)
-    await page.pdf({
+    const page2 = await browser.newPage();
+    await page2.goto(dataUrl, { waitUntil: 'load' });
+    await page2.pdf({
       path: pdfPath,
       printBackground: true,
       preferCSSPageSize: true,
@@ -126,7 +167,6 @@ try {
     });
 
     await browser.close();
-
     console.log('✅ Saved:', pdfPath, pngPath);
     cleanupAndExit(0);
   } catch (e) {
