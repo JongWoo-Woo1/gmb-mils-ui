@@ -5,7 +5,8 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "review": "node tools/review.mjs",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "code:snapshot": "node tools/make-code-snapshot.mjs"
   },
   "devDependencies": {
     "css-loader": "^6.10.0",
