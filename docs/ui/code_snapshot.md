@@ -1,7 +1,7 @@
 # Code Snapshot
 
-- commit: 755f4ae  (branch: main)
-- generated: 2025-10-29 00:27:37
+- commit: 917f27f  (branch: main)
+- generated: 2025-10-29 03:41:37
 - include: src, tools + package.json, webpack.config.js
 - exclude dirs: node_modules, dist, docs, .git, .github, assets
 - exclude files: package-lock.json
@@ -33,6 +33,7 @@
 │ ├─rail.css
 │ ├─responsive.css
 │ ├─shell.css
+│ ├─sidebar_fix.css
 │ ├─table.css
 │ ├─tokens.css
 │ └─toolbar.css
@@ -349,11 +350,11 @@ export function initAutoRun(){
 
 ### src\index.js
 ```js
-// src/index.js
 import './styles/main.css';
+import './styles/rail.css';
+import './styles/sidebar_fix.css';
 import logoUrl from './assets/gmb-logo.png';
 
-// HTML (layout + views)
 import layoutHtml from './components/layout.html';
 import dashboardHtml from './views/dashboard.html';
 import autoHtml from './views/auto.html';
@@ -361,53 +362,36 @@ import manualHtml from './views/manual.html';
 import resultHtml from './views/result.html';
 import settingsHtml from './views/settings.html';
 
-// AutoTest views
 import editorHtml from './views/autotest/editor.html';
 import runHtml from './views/autotest/run.html';
 
-// AutoTest init
 import { initAutoEditor } from './autotest/editor';
 import { initAutoRun } from './autotest/run';
 
-// SNAP(PNG) 버튼 — 이미 프로젝트에 있는 유틸
 import { mountSnapshotFab } from './utils/snapshotFab';
+import { mountFrameResizer } from './utils/frameResizer';
 
-// ─────────────────────────────────────────────────────────────
-// 내부 레일 CSS를 index.js에서 주입(별도 css 파일 없이 동작)
-// ─────────────────────────────────────────────────────────────
-const RAIL_W = 1600; // ★ 고정 콘텐츠 폭(원하면 1520/1600/1600 등으로 변경)
-
-(function injectRailCSS() {
-  const css = `
-  :root{ --rail-w: ${RAIL_W}px; }
-  #content{ position: relative; overflow: visible; } /* 내부 요소 잘림 방지 */
-  .lv-frame{ position: relative; height: 1000px; }   /* 캡처 기준 높이 고정 */
-  .lv-rail{
-    width: var(--rail-w);
-    height: 1000px;
-    margin-left: auto;
-    margin-right: auto;          /* 메인뷰 내부 중앙 정렬 */
-    position: relative;
-  }`;
-  const style = document.createElement('style');
-  style.textContent = css;
+// ─────────────────────────────────────────
+var RAIL_W = 1600; // 고정 콘텐츠 폭
+var RAIL_PAD = 0; // 내부 좌/우 패딩
+(function injectVars() {
+  var style = document.createElement('style');
+  style.textContent =
+    ':root{ --rail-w:' + RAIL_W + 'px; --rail-pad:' + RAIL_PAD + 'px; }';
   document.head.appendChild(style);
 })();
 
-// 문자열 → DocumentFragment
-const toFragment = (html) => {
-  const t = document.createElement('template');
-  t.innerHTML = html.trim();
+function toFragment(html) {
+  var t = document.createElement('template');
+  t.innerHTML = (html || '').trim();
   return t.content;
-};
+}
 
-// 레이아웃 장착
-const app = document.getElementById('app');
+var app = document.getElementById('app');
 app.appendChild(toFragment(layoutHtml));
 document.getElementById('logo').src = logoUrl;
 
-// 라우트 테이블
-const routes = {
+var routes = {
   dashboard: { title: 'Dashboard', frag: toFragment(dashboardHtml) },
   auto: { title: 'Auto Test', frag: toFragment(autoHtml) },
   'auto/editor': {
@@ -420,61 +404,74 @@ const routes = {
   settings: { title: 'Settings', frag: toFragment(settingsHtml) },
 };
 
-const titleEl = document.getElementById('view-title');
-const contentEl = document.getElementById('content');
+var titleEl = document.getElementById('view-title');
+var contentEl = document.getElementById('content');
 
 function setActiveNav(key) {
-  document.querySelectorAll('.nav-btn').forEach((a) => {
-    const k = key.startsWith('auto/') ? 'auto' : key;
-    a.classList.toggle('is-active', a.dataset.view === k);
-  });
+  var buttons = document.querySelectorAll('.nav-btn');
+  for (var i = 0; i < buttons.length; i++) {
+    var a = buttons[i];
+    var k = key.indexOf('auto/') === 0 ? 'auto' : key;
+    a.classList.toggle('is-active', a.getAttribute('data-view') === k);
+  }
 }
 
-// 각 뷰를 고정 폭 레일로 감싸 중앙 배치
 function wrapWithRail(node) {
-  const rail = document.createElement('div');
+  var rail = document.createElement('div');
   rail.className = 'lv-rail';
   rail.appendChild(node);
   return rail;
 }
 
+// 헤더도 같은 레일 기준으로 정렬
+(function alignHeaderInsideRail() {
+  if (!titleEl) return;
+  var headerRow = titleEl.parentElement;
+  if (headerRow) {
+    headerRow.classList.add('lv-header-rail');
+  }
+})();
+
 function renderRoute() {
-  let key = location.hash.replace('#/', '') || 'dashboard';
+  var key = location.hash.replace('#/', '') || 'dashboard';
   if (key === 'auto') {
-    // auto 루트 접근 시 에디터로 유도
     location.hash = '#/auto/editor';
     return;
   }
-  const page = routes[key] || routes.dashboard;
-  titleEl.textContent = page.title;
-  contentEl.replaceChildren(wrapWithRail(page.frag.cloneNode(true))); // ★ 중앙 고정폭 레일
+  var page = routes[key] || routes.dashboard;
+  if (titleEl) titleEl.textContent = page.title;
+  if (contentEl)
+    contentEl.replaceChildren(wrapWithRail(page.frag.cloneNode(true)));
   setActiveNav(key);
-
-  // 뷰별 초기화
   if (key === 'auto/editor') initAutoEditor();
   if (key === 'auto/run') initAutoRun();
 }
-
 window.addEventListener('hashchange', renderRoute);
 renderRoute();
 
-// SNAP 버튼(1920×1000 캡처 → PNG 저장). selector는 기존 프레임 기준 유지
+// 스냅샷 + 드래그(창 가로폭만 변경, UI는 고정)
 mountSnapshotFab({
   selector: '.lv-frame',
   filename: 'Snapshot',
   size: [1920, 1000],
 });
+mountFrameResizer({
+  selector: '.lv-frame',
+  initial: 1920,
+  height: 1000,
+  min: 1920,
+  max: 2560,
+});
 
-// ─────────────────────────────────────────────────────────────
-// 이하 데모 상태/모니터링 코드(프로젝트에 이미 있던 부분 유지)
-// ─────────────────────────────────────────────────────────────
-const EStop = {
+// ----- 데모 상태 코드(문법 호환 버전) -----
+var EStop = {
   READY: 'ready',
   WARNING: 'warning',
   EMERGENCY: 'emergency',
   LATCHED: 'latched',
 };
-const estopBtn = document.getElementById('btn-estop');
+var estopBtn = document.getElementById('btn-estop');
+
 function labelFor(state) {
   return state === EStop.LATCHED ? 'RESET' : 'E-STOP';
 }
@@ -490,6 +487,7 @@ function titleFor(state) {
       return 'E-Stop: Latched (click to reset)';
   }
 }
+
 function setEStopState(state) {
   if (!estopBtn) return;
   estopBtn.dataset.state = state;
@@ -497,65 +495,70 @@ function setEStopState(state) {
   estopBtn.title = titleFor(state);
 }
 setEStopState(EStop.READY);
-estopBtn?.addEventListener('click', (e) => {
-  const cur = estopBtn.dataset.state;
-  if (e.shiftKey) {
-    const order = [EStop.READY, EStop.WARNING, EStop.EMERGENCY, EStop.LATCHED];
-    const next = order[(order.indexOf(cur) + 1) % order.length];
-    setEStopState(next);
-    return;
-  }
-  setEStopState(cur === EStop.LATCHED ? EStop.READY : EStop.LATCHED);
-});
+if (estopBtn) {
+  estopBtn.addEventListener('click', function (e) {
+    var cur = estopBtn.dataset.state;
+    if (e.shiftKey) {
+      var order = [EStop.READY, EStop.WARNING, EStop.EMERGENCY, EStop.LATCHED];
+      var next = order[(order.indexOf(cur) + 1) % order.length];
+      setEStopState(next);
+      return;
+    }
+    setEStopState(cur === EStop.LATCHED ? EStop.READY : EStop.LATCHED);
+  });
+}
 
-// 연결 상태 데모
+// 연결 상태 표시(백틱 제거)
 function setConnection(key, status) {
-  const item = document.querySelector(`.conn-item[data-key="${key}"]`);
+  var sel = '.conn-item[data-key="' + key + '"]';
+  var item = document.querySelector(sel);
   if (!item) return;
-  item.querySelector('.dot').setAttribute('data-status', status);
-  item.querySelector('.text').textContent =
-    status === 'connected' ? 'Connected' : 'Disconnected';
+  var dot = item.querySelector('.dot');
+  var text = item.querySelector('.text');
+  if (dot) dot.setAttribute('data-status', status);
+  if (text)
+    text.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
 }
 setConnection('sim', 'connected');
 setConnection('vs', 'disconnected');
 
-// Run Monitor 데모
-const monitorEl = document.getElementById('run-monitor');
-const modeChip = document.getElementById('rm-mode');
-const statusChip = document.getElementById('rm-status');
-const line1 = document.getElementById('rm-line1');
-const line2 = document.getElementById('rm-line2');
-const Modes = { IDLE: 'idle', AUTO: 'auto', MANUAL: 'manual' };
-const Status = { STANDBY: 'Standby', RUNNING: 'Running' };
+// Run Monitor
+var monitorEl = document.getElementById('run-monitor');
+var modeChip = document.getElementById('rm-mode');
+var statusChip = document.getElementById('rm-status');
+var line1 = document.getElementById('rm-line1');
+var line2 = document.getElementById('rm-line2');
+var Modes = { IDLE: 'idle', AUTO: 'auto', MANUAL: 'manual' };
+var Status = { STANDBY: 'Standby', RUNNING: 'Running' };
+
 function setMonitor(mode) {
   if (!monitorEl) return;
   monitorEl.dataset.mode = mode;
-  switch (mode) {
-    case Modes.AUTO:
-      modeChip.textContent = 'Auto';
-      statusChip.textContent = Status.RUNNING;
-      statusChip.removeAttribute('data-level');
+  if (mode === Modes.AUTO) {
+    if (modeChip) modeChip.textContent = 'Auto';
+    if (statusChip) statusChip.textContent = Status.RUNNING;
+    if (statusChip) statusChip.removeAttribute('data-level');
+    if (line1)
       line1.textContent = 'Battery_A • TC-0421 • Step 08  Set Voltage 12.0V';
-      line2.textContent = 'Case Elapsed 00:18:22  •  Step 8/120 (12%)';
-      break;
-    case Modes.MANUAL:
-      modeChip.textContent = 'Manual';
-      statusChip.textContent = Status.STANDBY;
-      statusChip.removeAttribute('data-level');
-      line1.textContent = 'Manual Action  Jog Axis X+';
-      line2.textContent = 'Session Elapsed 00:03:41';
-      break;
-    default:
-      modeChip.textContent = 'Idle';
-      statusChip.textContent = Status.STANDBY;
-      statusChip.removeAttribute('data-level');
-      line1.textContent = 'No active test';
-      line2.textContent = '—';
+    if (line2) line2.textContent = 'Case Elapsed 00:18:22  •  Step 8/120 (12%)';
+  } else if (mode === Modes.MANUAL) {
+    if (modeChip) modeChip.textContent = 'Manual';
+    if (statusChip) statusChip.textContent = Status.STANDBY;
+    if (statusChip) statusChip.removeAttribute('data-level');
+    if (line1) line1.textContent = 'Manual Action  Jog Axis X+';
+    if (line2) line2.textContent = 'Session Elapsed 00:03:41';
+  } else {
+    if (modeChip) modeChip.textContent = 'Idle';
+    if (statusChip) statusChip.textContent = Status.STANDBY;
+    if (statusChip) statusChip.removeAttribute('data-level');
+    if (line1) line1.textContent = 'No active test';
+    if (line2) line2.textContent = '—';
   }
 }
 function cycleMode() {
-  const cur = monitorEl?.dataset.mode || Modes.IDLE;
-  const next =
+  if (!monitorEl) return;
+  var cur = monitorEl.dataset.mode || Modes.IDLE;
+  var next =
     cur === Modes.IDLE
       ? Modes.AUTO
       : cur === Modes.AUTO
@@ -563,8 +566,10 @@ function cycleMode() {
       : Modes.IDLE;
   setMonitor(next);
 }
-monitorEl?.addEventListener('click', cycleMode);
-setMonitor(Modes.IDLE);
+if (monitorEl) {
+  monitorEl.addEventListener('click', cycleMode);
+  setMonitor(Modes.IDLE);
+}
 
 ```
 
@@ -752,56 +757,58 @@ a {
 
 ### src\styles\layout.css
 ```css
-/* 프레임 내부 100% */
+/* src/styles/layout.css — 사이드바 그리드화로 Connections 하단 정렬 안정화 */
 .app {
   display: grid;
-  grid-template-columns: 260px 1fr; /* Run Monitor 넓게 */
+  grid-template-columns: 260px 1fr;
   width: 100%;
   height: 100%;
 }
 
-/* 사이드바: 아래 여백 줄이고, 내부 간격 살짝 압축 */
+/* 사이드바: grid로 재구성 (상단 Brand, 중간 Nav+RunMonitor, 하단 Connections) */
 .sidebar {
   background: var(--white);
   border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 12px; /* 14→12 */
-  padding: 14px; /* 16→14 */
-  padding-bottom: 12px; /* footer 제거 따라 최소화 */
+  display: grid;
+  grid-template-rows: auto 1fr auto auto; /* brand | nav(스크롤) | run-monitor | connections */
+  gap: 12px;
+  padding: 14px;
+  height: 100%; /* 프레임 높이에 맞춤 */
+  overflow: hidden; /* 내부 스크롤은 nav에서 처리 */
 }
+.brand-bar{
+  display:flex; align-items:center; justify-content:center;
+  padding: 10px 6px 10px; border-bottom: 1px solid var(--line);
+}
+.brand{ display:inline-flex; align-items:center; justify-content:center; width:100%; }
+.brand img{ width: 140px; height:auto; display:block; object-fit:contain; }
 
-.brand-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 6px 10px;
-  border-bottom: 1px solid var(--line);
+.nav{
+  display:flex; flex-direction:column; gap:10px; margin-top:12px;
+  overflow:auto; min-height: 0; /* grid item이 높이 줄어들 수 있게 */
 }
-.brand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+.nav-btn{
+  display:flex; align-items:center;
+  border: 1px solid var(--line); background:#fff;
+  font-weight:700; cursor:pointer; position:relative;
+  height:56px; font-size:18px; padding:0 18px;
 }
-.brand img {
-  width: 140px;
-  height: auto;
-  display: block;
-  object-fit: contain;
-}
+.nav-btn:is(:hover, :focus-visible){ outline:none; border-color:var(--brand-red); background:#f8fafc; }
+.nav-btn.is-active{ border-color: var(--line); box-shadow: inset var(--stripe-w) 0 0 0 var(--brand-red); background:#fff; color:var(--ink-900); }
 
-/* 메인 영역은 그대로 */
-.main {
+/* Run Monitor는 고정 높이로, 연결부와 겹치지 않게 별 행에 둠 */
+.run-monitor{ border:1px solid var(--line); background:#fff; padding:14px; height:360px; display:flex; flex-direction:column; }
+
+/* Connections는 마지막 행: 자연스런 하단 정렬, 넘침 방지 */
+.connections{ border:1px solid var(--line); background:#fff; padding:12px; margin:0; align-self:end; }
+
+.main{
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-.content {
-  display: grid;
-  gap: 20px;
-}
+.content{ display:grid; gap:20px; }
 
 ```
 
@@ -961,31 +968,11 @@ a {
 
 ### src\styles\rail.css
 ```css
-/* 내부 레일: 메인뷰 내부 좌우 여백을 만들고, UI는 1600×1000로 고정 */
-:root {
-  --rail-w: 1600px;
-} /* ← 1520/1600/1600 등으로 바꿔도 됨 */
-
-#content {
-  position: relative;
-  overflow: visible;
-} /* 핸들/자식 요소 잘림 방지 */
-.lv-frame {
-  position: relative;
-  height: 1000px;
-} /* 스냅샷 대상 높이 고정 */
-
-.lv-rail {
-  width: var(--rail-w);
-  height: 1000px;
-  margin-left: auto;
-  margin-right: auto; /* 메인뷰 안에서 중앙 정렬 */
-  position: relative;
-  /* 디버그용 테두리(필요시 해제)
-  outline: 0px dashed #e5e7eb;
-  */
-}
-
+:root{ --rail-w:1600px; --rail-pad:40px; }
+.lv-header-rail{ width:var(--rail-w); margin:0 auto; padding:0 var(--rail-pad); display:flex; align-items:center; gap:12px; }
+#content{ position:relative; overflow:visible; }
+.lv-frame{ position:relative; height:1000px; }
+.lv-rail{ width:var(--rail-w); height:1000px; margin:0 auto; position:relative; padding:0 var(--rail-pad); }
 ```
 
 ### src\styles\responsive.css
@@ -1030,6 +1017,14 @@ a {
   overflow: hidden; /* 내부 스크롤 방지 */
 }
 
+```
+
+### src\styles\sidebar_fix.css
+```css
+.sidebar{ display:flex; flex-direction:column; height:1000px; overflow:hidden; gap:12px; }
+.nav{ flex:1 1 auto; overflow:auto; min-height:0; }
+.run-monitor{ flex:0 0 auto; }
+.connections{ margin-top:auto; flex:0 0 auto; }
 ```
 
 ### src\styles\table.css

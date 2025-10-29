@@ -1,0 +1,4 @@
+.sidebar{ display:flex; flex-direction:column; height:1000px; overflow:hidden; gap:12px; }
+.nav{ flex:1 1 auto; overflow:auto; min-height:0; }
+.run-monitor{ flex:0 0 auto; }
+.connections{ margin-top:auto; flex:0 0 auto; }
